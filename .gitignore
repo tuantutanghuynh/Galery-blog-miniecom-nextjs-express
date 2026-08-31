@@ -3,4 +3,4 @@ node_modules/
 .next/
 dist/
 .DS_Store
-.docs/
+docs/
