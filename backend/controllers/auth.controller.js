@@ -116,7 +116,7 @@ const refresh = asyncHandler(async (req, res) => {
     //   THROW a new ApiError (Status: 401, Code: 'INVALID_REFRESH_TOKEN', Message: 'Invalid refresh token')
     const rotated = await rotateRefreshToken(refreshToken);
     if (!rotated) {
-        throw new ApiError(401, 'INVALID_CREDENTIALS', 'Invalid refresh token')
+        throw new ApiError(401, 'INVALID_REFRESH_TOKEN', 'Invalid refresh token')
     }
 
     // Step 3: Fetch user details for new access token payload

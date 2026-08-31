@@ -17,7 +17,7 @@ const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; //7 NGÀY
 // ==========================================
 // FUNCTION hashToken(rawToken):
 // Purpose: Creates a secure hash of the raw token before storing it in the database
-function hasToken(rawToken) {
+function hashToken(rawToken) {
     // CREATE a SHA-256 hash object
     // UPDATE the hash object with the 'rawToken'
     // RETURN the resulting hash as a hexadecimal string
@@ -42,7 +42,7 @@ async function issueRefreshToken(userId) {
     await prisma.refreshToken.create({
         data: {
             userId,
-            tokenHash: hasToken(rawToken),
+            tokenHash: hashToken(rawToken),
             expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
         }
     });
@@ -59,7 +59,7 @@ async function issueRefreshToken(userId) {
 // Purpose: Replaces an old, valid refresh token with a new one (Token Rotation)
 async function rotateRefreshToken(rawToken) {
     // HASH the provided 'rawToken' to get 'tokenHash'
-    const tokenHash = hasToken(rawToken);
+    const tokenHash = hashToken(rawToken);
     // AWAIT database operation to FIND the FIRST 'refreshToken' record where:
     //   - The token hash matches 'tokenHash'
     //   - The token has NOT been revoked ('revokedAt' is null)
@@ -94,7 +94,7 @@ async function rotateRefreshToken(rawToken) {
 // Purpose: Manually invalidates a refresh token (e.g., for logging out)
 async function revokeRefreshToken(rawToken) {
     // HASH the provided 'rawToken' to get 'tokenHash'
-    const tokenHash = hasToken(rawToken);
+    const tokenHash = hashToken(rawToken);
     // AWAIT database operation to UPDATE ALL 'refreshToken' records where:
     //   - The token hash matches 'tokenHash'
     //   - The token has NOT been revoked yet ('revokedAt' is null)
