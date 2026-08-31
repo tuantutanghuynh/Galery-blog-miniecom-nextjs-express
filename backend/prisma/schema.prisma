@@ -79,3 +79,12 @@ model ProductImage {
   altText   String?
   position  Int     @default(0)
 }
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
