@@ -1,69 +1,142 @@
-import Image from "next/image";
+import Image from 'next/image';
+import Link from 'next/link';
+import { apiFetch } from '../lib/apiClient';
+import { BRAND_CATEGORY_SLUG } from '../lib/brand';
 
-export default function Home() {
+export const metadata = {
+  title: 'Trang chủ',
+  description: 'Hơi thở đất - Dáng hình thời gian. Gốm sứ nghệ thuật thủ công Bát Tràng.',
+};
+
+export default async function HomePage() {
+  const [{ data: galleryItems }, { data: posts }] = await Promise.all([
+    apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=4`, { cache: 'no-store' }),
+    apiFetch(`/blog?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=3`, { cache: 'no-store' }),
+  ]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.js
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div>
+      {/* Hero */}
+      <section className="px-6 py-20 md:py-32 border-b border-gomsu-border">
+        <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-primary mb-6">
+          Bát Tràng Art Atelier
+        </h3>
+        <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl font-medium leading-tight max-w-3xl">
+          Hơi thở đất
+          <br />
+          Dáng hình thời gian
+        </h1>
+        <p className="font-light text-gomsu-text-muted mt-6 max-w-md">
+          Nghĩa Phái kết nối tinh hoa gốm sứ Bát Tràng với ngôn ngữ nghệ thuật đương đại, tạo
+          nên những giá trị vượt thời gian.
+        </p>
+        <Link
+          href="/gallery"
+          className="inline-flex items-center gap-2 mt-8 px-6 py-3 border border-gomsu-primary/50 text-gomsu-primary hover:bg-gomsu-primary hover:text-black transition-colors uppercase text-xs tracking-widest"
+        >
+          Khám phá nghệ thuật <span>&rarr;</span>
+        </Link>
+      </section>
+
+      {/* Giới thiệu nghệ nhân */}
+      <section className="px-6 py-16 border-b border-gomsu-border grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
+            Nghệ sĩ
+          </h3>
+          <h2 className="font-serif text-2xl">Artist &ndash; Designer &ndash; Ceramicist</h2>
+          <p className="font-light text-gomsu-text-muted mt-4">
+            Tìm kiếm sự cân bằng giữa thủ pháp truyền thống Bát Tràng và ngôn ngữ thị giác
+            đương đại.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="grid grid-cols-3 gap-4 md:col-span-2 items-center">
+          {[
+            ['10+', 'Năm sáng tác'],
+            ['20+', 'Triển lãm trong nước & quốc tế'],
+            ['10+', 'Giải thưởng nghệ thuật'],
+          ].map(([number, label]) => (
+            <div key={label} className="border border-gomsu-border p-4 text-center">
+              <p className="font-serif text-3xl text-gomsu-primary">{number}</p>
+              <p className="text-xs text-gomsu-text-muted mt-2 uppercase tracking-wide">{label}</p>
+            </div>
+          ))}
         </div>
-      </main>
+      </section>
+
+      {/* Quote */}
+      <section className="px-6 py-16 border-b border-gomsu-border text-center">
+        <p className="font-serif text-xl md:text-3xl italic max-w-2xl mx-auto leading-relaxed">
+          &ldquo;Đất có ký ức riêng của nó. Vai trò của tôi là lắng nghe và tạo hình.&rdquo;
+        </p>
+      </section>
+
+      {/* Tác phẩm nổi bật */}
+      <section className="border-b border-gomsu-border">
+        <div className="px-6 py-10 flex items-center justify-between">
+          <h2 className="font-serif text-2xl md:text-3xl">Tác phẩm nổi bật</h2>
+          <Link href="/gallery" className="text-xs uppercase tracking-widest text-gomsu-primary">
+            Xem tất cả &rarr;
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4">
+          {galleryItems.map((item) => (
+            <div key={item.id} className="border-r border-b border-gomsu-border aspect-square">
+              <Image
+                src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${item.imageUrl}`}
+                alt={item.altText}
+                width={400}
+                height={400}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Tin tức mới nhất */}
+      <section>
+        <div className="px-6 py-10 flex items-center justify-between">
+          <h2 className="font-serif text-2xl md:text-3xl">Tin tức mới nhất</h2>
+          <Link href="/blog" className="text-xs uppercase tracking-widest text-gomsu-primary">
+            Xem tất cả &rarr;
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 border-b border-gomsu-border">
+          {posts.map((post) => (
+            <Link
+              key={post.id}
+              href={`/blog/${post.slug}`}
+              className="border-r border-b border-gomsu-border p-8 hover:text-gomsu-primary transition-colors"
+            >
+              <h3 className="font-serif text-lg">{post.title}</h3>
+              <p className="text-gomsu-text-muted text-sm mt-2 font-light line-clamp-2">
+                {post.excerpt}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Liên hệ hợp tác */}
+      <section className="px-6 py-16 border-b border-gomsu-border">
+        <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
+          Liên hệ hợp tác
+        </h3>
+        <h2 className="font-serif text-2xl md:text-3xl max-w-lg">
+          Chúng tôi đồng hành cùng bạn kiến tạo những giá trị bền vững từ gốm sứ Bát Tràng.
+        </h2>
+        <div className="mt-6 flex flex-col gap-2 text-gomsu-text-muted font-light text-sm">
+          <p>&#9993; info@nghiaphai.vn</p>
+          <p>&#9742; +84 xxx xxx xxx</p>
+          <p>&#128205; Bát Tràng, Gia Lâm, Hà Nội</p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="px-6 py-8 text-xs text-gomsu-text-muted">
+        &copy; {new Date().getFullYear()} Nghĩa Phái Art &amp; Design. All rights reserved.
+      </footer>
     </div>
   );
 }

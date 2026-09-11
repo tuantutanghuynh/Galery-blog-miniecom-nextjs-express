@@ -1,15 +1,19 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { apiFetch } from '../../lib/apiClient';
 import { BRAND_CATEGORY_SLUG } from '../../lib/brand';
 
 export const metadata = { title: 'Bộ sưu tập' };
 
-export default async function GalleryPage() {
-  // cache: 'no-store' vì chưa có cơ chế revalidate on-demand khi admin thêm/xoá ảnh —
-  // dùng next.revalidate ở đây sẽ khiến ảnh mới "biến mất tạm thời" tới 60s sau khi thêm
-  // (đã tự gặp bug này, xem log buổi 11). Sẽ đổi lại thành ISR đúng khi xây revalidate
-  // on-demand (gọi revalidatePath từ 1 Route Handler ngay sau khi admin tạo/xoá thành công).
-  const { data: items } = await apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}`, { cache: 'no-store' });
+export default async function GalleryPage({ searchParams }) {
+  const { category: selectedSlug } = await searchParams; // Next.js 16: searchParams là Promise
+
+  const { data: categories } = await apiFetch('/categories', { cache: 'no-store' });
+  const brand = categories.find((c) => c.slug === BRAND_CATEGORY_SLUG);
+  const subCategories = categories.filter((c) => c.parentId === brand?.id);
+
+  const activeSlug = selectedSlug || BRAND_CATEGORY_SLUG;
+  const { data: items } = await apiFetch(`/gallery?categorySlug=${activeSlug}`, { cache: 'no-store' });
 
   return (
     <div>
@@ -20,6 +24,28 @@ export default async function GalleryPage() {
         <h1 className="font-serif text-4xl md:text-6xl font-medium leading-tight">
           Bộ sưu tập
         </h1>
+      </div>
+
+      <div className="flex gap-6 px-6 py-6 border-b border-gomsu-border overflow-x-auto">
+        <Link
+          href="/gallery"
+          className={`text-xs uppercase tracking-widest whitespace-nowrap ${
+            !selectedSlug ? 'text-gomsu-primary' : 'text-gomsu-text-muted hover:text-gomsu-primary'
+          }`}
+        >
+          Tất cả
+        </Link>
+        {subCategories.map((c) => (
+          <Link
+            key={c.id}
+            href={`/gallery?category=${c.slug}`}
+            className={`text-xs uppercase tracking-widest whitespace-nowrap ${
+              selectedSlug === c.slug ? 'text-gomsu-primary' : 'text-gomsu-text-muted hover:text-gomsu-primary'
+            }`}
+          >
+            {c.name}
+          </Link>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">

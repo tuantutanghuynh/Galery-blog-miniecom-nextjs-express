@@ -9,12 +9,14 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const { name, slug, description } = req.body;
+  const { name, slug, description, parentId } = req.body;
 
   const existing = await prisma.category.findUnique({ where: { slug } });
   if (existing) throw new ApiError(409, 'SLUG_TAKEN', 'Slug danh mục đã tồn tại');
 
-  const category = await prisma.category.create({ data: { name, slug, description } });
+  const category = await prisma.category.create({
+    data: { name, slug, description, parentId: parentId || null },
+  });
   sendSuccess(res, category, null, 201);
 });
 

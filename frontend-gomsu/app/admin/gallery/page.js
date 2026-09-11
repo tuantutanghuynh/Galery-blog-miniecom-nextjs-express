@@ -7,13 +7,23 @@ import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
 export default function AdminGalleryPage() {
   const [items, setItems] = useState([]);
 
+  function loadItems() {
+    authFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => setItems(res.data || []));
+  }
+
   useEffect(() => {
     if (!getToken()) {
       window.location.href = '/admin/login';
       return;
     }
-    authFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => setItems(res.data || []));
+    loadItems();
   }, []);
+
+  async function handleDelete(id) {
+    if (!confirm('Xoá ảnh này?')) return;
+    await authFetch(`/gallery/${id}`, { method: 'DELETE' });
+    loadItems(); // tải lại danh sách sau khi xoá thành công
+  }
 
   return (
     <div className="max-w-2xl mx-auto mt-8">
@@ -28,7 +38,10 @@ export default function AdminGalleryPage() {
               alt={item.altText}
               className="rounded w-full h-24 object-cover"
             />
-            <p className="truncate mt-1">{item.altText}</p>
+            <div className="flex items-center justify-between mt-1 gap-2">
+              <p className="truncate">{item.altText}</p>
+              <button onClick={() => handleDelete(item.id)} className="text-red-600 shrink-0">✕</button>
+            </div>
           </li>
         ))}
       </ul>
