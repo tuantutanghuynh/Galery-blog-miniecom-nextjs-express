@@ -1,17 +1,15 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authFetch, getToken } from '../../../../lib/adminAuth';
+import { authFetch } from '../../../../lib/adminAuth';
 
 async function uploadImage(file) {
   const formData = new FormData();
   formData.append('image', file);
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/uploads/image`, {
+  const json = await authFetch('/uploads/image', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
     body: formData,
   });
-  const json = await res.json();
   return json.data.url;
 }
 
@@ -19,25 +17,38 @@ export default function NewPostPage() {
   const router = useRouter();
   const [form, setForm] = useState({ title: '', slug: '', excerpt: '', content: '', coverImageUrl: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   async function handleCoverUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    const url = await uploadImage(file);
-    setForm((f) => ({ ...f, coverImageUrl: url }));
+    setErrorMsg(null);
+    try {
+      const url = await uploadImage(file);
+      setForm((f) => ({ ...f, coverImageUrl: url }));
+    } catch (err) {
+      setErrorMsg('Lỗi khi tải ảnh lên. Vui lòng thử lại.');
+    }
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
-    await authFetch('/blog', { method: 'POST', body: JSON.stringify(form) });
-    setSubmitting(false);
-    router.push('/admin/posts');
+    setErrorMsg(null);
+    try {
+      await authFetch('/blog', { method: 'POST', body: JSON.stringify(form) });
+      router.push('/admin/posts');
+    } catch (err) {
+      setErrorMsg('Lỗi khi lưu bài viết. Vui lòng kiểm tra lại (có thể trùng slug).');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className="max-w-xl mx-auto mt-8">
       <h1 className="text-2xl font-bold mb-4">Viết bài mới</h1>
+      {errorMsg && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{errorMsg}</div>}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           required placeholder="Tiêu đề" value={form.title}
@@ -72,7 +83,7 @@ export default function NewPostPage() {
           type="submit" disabled={submitting}
           className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
         >
-          {submitting ? 'Đang lưu...' : 'Lưu nháp'}
+          {submitting ? 'Đang lưu...' : 'Lưu bài viết'}
         </button>
       </form>
     </div>
