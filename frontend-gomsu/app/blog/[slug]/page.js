@@ -50,10 +50,16 @@ export default async function BlogDetailPage({ params }) {
   };
 
   return (
-    <article className="prose max-w-none">
+    <article className="max-w-3xl mx-auto px-6 py-16">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
+        Nghĩa Phái Art &amp; Design
+      </h3>
+      <h1 className="font-serif text-4xl md:text-5xl font-medium leading-tight mb-8">{post.title}</h1>
+      <div
+        className="font-light leading-relaxed space-y-4 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:mt-8 [&_h2]:mb-2 [&_a]:text-gomsu-primary"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </article>
   );
 }

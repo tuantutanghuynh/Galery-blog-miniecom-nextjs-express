@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { apiFetch } from '../../lib/apiClient';
 
-export const metadata = { title: 'Blog' };
+export const metadata = { title: 'Tin tức' };
 
 export default async function BlogListPage() {
   // cache: 'no-store' vì chưa có cơ chế revalidate on-demand khi admin publish bài —
@@ -13,24 +13,43 @@ export default async function BlogListPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Blog</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="px-6 py-16 border-b border-gomsu-border">
+        <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
+          Tin tức &amp; Câu chuyện
+        </h3>
+        <h1 className="font-serif text-4xl md:text-6xl font-medium leading-tight">
+          Ghi chép từ xưởng gốm
+        </h1>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => (
-          <article key={post.id} className="border border-gray-200 rounded-lg overflow-hidden">
+          <article
+            key={post.id}
+            className="border-r border-b border-gomsu-border p-8 flex flex-col gap-4"
+          >
             {post.coverImageUrl && (
               <Image
                 src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${post.coverImageUrl}`}
                 alt={post.title}
                 width={400}
                 height={250}
-                className="w-full h-auto"
+                className="w-full h-auto object-cover"
               />
             )}
-            <div className="p-4">
-              <h2 className="text-lg font-semibold">
-                <Link href={`/blog/${post.slug}`} className="hover:underline">{post.title}</Link>
+            <div>
+              <h2 className="font-serif text-2xl">
+                <Link href={`/blog/${post.slug}`} className="hover:text-gomsu-primary transition-colors">
+                  {post.title}
+                </Link>
               </h2>
-              <p className="text-gray-600 mt-1">{post.excerpt}</p>
+              <p className="text-gomsu-text-muted mt-2 font-light">{post.excerpt}</p>
+              <Link
+                href={`/blog/${post.slug}`}
+                className="inline-flex items-center gap-2 mt-4 text-xs uppercase tracking-widest text-gomsu-primary"
+              >
+                Xem chi tiết <span>&rarr;</span>
+              </Link>
             </div>
           </article>
         ))}
