@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import apiClient from '../../lib/apiClient';
+import { apiFetch } from '../../lib/apiClient';
 
 export const metadata = { title: 'Blog' };
 
 export default async function BlogListPage() {
-  const { data } = await apiClient.get('/blog');
-  const posts = data.data;
+  // revalidate: 60 -> Next.js cache kết quả 60 giây, sau đó tự làm mới ở request tiếp theo
+  // (ISR). Đặt ngắn vì admin publish bài xong muốn thấy sớm, chưa có on-demand revalidate.
+  const { data: posts } = await apiFetch('/blog', { next: { revalidate: 60 } });
 
   return (
     <div>

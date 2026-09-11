@@ -1,13 +1,12 @@
-import apiClient from '../../../lib/apiClient';
+import { apiFetch } from '../../../lib/apiClient';
 import { renderMarkdown } from '../../../lib/markdown';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ params }) {
-  const { slug } = await params;
-  
+  const { slug } = await params; // Next.js 16: params là Promise, bắt buộc phải await
+
   try {
-    const { data } = await apiClient.get(`/blog/${slug}`);
-    const post = data.data;
+    const { data: post } = await apiFetch(`/blog/${slug}`, { next: { revalidate: 60 } });
     return {
       title: post.seoTitle || post.title,
       description: post.seoDescription || post.excerpt,
@@ -26,14 +25,14 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function BlogDetailPage({ params }) {
-  const { slug } = await params;
-  
+  const { slug } = await params; // Next.js 16: params là Promise, bắt buộc phải await
+
   let post;
   try {
-    const { data } = await apiClient.get(`/blog/${slug}`);
-    post = data.data;
+    const { data } = await apiFetch(`/blog/${slug}`, { next: { revalidate: 60 } });
+    post = data;
   } catch (error) {
-    notFound(); 
+    notFound();
   }
 
   const html = renderMarkdown(post.content);
