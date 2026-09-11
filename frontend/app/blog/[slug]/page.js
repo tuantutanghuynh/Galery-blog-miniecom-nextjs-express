@@ -1,5 +1,5 @@
 import { apiFetch } from '../../../lib/apiClient';
-import { renderMarkdown } from '../../../lib/markdown';
+import { renderMarkdown, excerptFromContent } from '../../../lib/markdown';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ params }) {
@@ -7,12 +7,15 @@ export async function generateMetadata({ params }) {
 
   try {
     const { data: post } = await apiFetch(`/blog/${slug}`, { cache: 'no-store' });
+    // Luôn phải có description — nếu cả seoDescription lẫn excerpt đều trống, description
+    // trả về null sẽ XOÁ hẳn thẻ <meta name="description">, không phải kế thừa từ layout.
+    const description = post.seoDescription || post.excerpt || excerptFromContent(post.content);
     return {
       title: post.seoTitle || post.title,
-      description: post.seoDescription || post.excerpt,
+      description,
       openGraph: {
         title: post.seoTitle || post.title,
-        description: post.seoDescription || post.excerpt,
+        description,
         images: post.coverImageUrl ? [`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${post.coverImageUrl}`] : [],
         type: 'article',
       },
