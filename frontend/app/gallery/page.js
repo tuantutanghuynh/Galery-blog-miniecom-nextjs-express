@@ -4,7 +4,11 @@ import { apiFetch } from '../../lib/apiClient';
 export const metadata = { title: 'Gallery' };
 
 export default async function GalleryPage() {
-  const { data: items } = await apiFetch('/gallery', { next: { revalidate: 60 } });
+  // cache: 'no-store' vì chưa có cơ chế revalidate on-demand khi admin thêm/xoá ảnh —
+  // dùng next.revalidate ở đây sẽ khiến ảnh mới "biến mất tạm thời" tới 60s sau khi thêm
+  // (đã tự gặp bug này, xem log buổi 11). Sẽ đổi lại thành ISR đúng khi xây revalidate
+  // on-demand (gọi revalidatePath từ 1 Route Handler ngay sau khi admin tạo/xoá thành công).
+  const { data: items } = await apiFetch('/gallery', { cache: 'no-store' });
 
   return (
     <div>

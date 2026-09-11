@@ -58,28 +58,36 @@ async function refreshAccessToken() {
 
 export async function authFetch(path, options = {}) {
   const token = getToken();
+  
+  const isFormData = typeof window !== 'undefined' && options.body instanceof FormData;
+  const customHeaders = {
+    Authorization: `Bearer ${token}`,
+    ...options.headers,
+  };
+
+  if (!isFormData && !customHeaders['Content-Type']) {
+    customHeaders['Content-Type'] = 'application/json';
+  }
 
   let res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
+    headers: customHeaders,
   });
 
   // Xử lý tự động Refresh Token nếu Access Token hết hạn (Lỗi 401)
   if (res.status === 401) {
     try {
       const newAccessToken = await refreshAccessToken();
+      
+      const retryHeaders = {
+        ...customHeaders,
+        Authorization: `Bearer ${newAccessToken}`,
+      };
+
       // Retry (gọi lại) API ban đầu vừa bị lỗi với Access Token mới
       res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
         ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${newAccessToken}`,
-          ...options.headers,
-        },
+        headers: retryHeaders,
       });
     } catch (err) {
       // Refresh thất bại (token hỏng/hết hạn/không có) -> xoá token & đuổi về login

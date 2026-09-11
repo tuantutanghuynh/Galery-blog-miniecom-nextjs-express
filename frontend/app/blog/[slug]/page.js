@@ -6,7 +6,7 @@ export async function generateMetadata({ params }) {
   const { slug } = await params; // Next.js 16: params là Promise, bắt buộc phải await
 
   try {
-    const { data: post } = await apiFetch(`/blog/${slug}`, { next: { revalidate: 60 } });
+    const { data: post } = await apiFetch(`/blog/${slug}`, { cache: 'no-store' });
     return {
       title: post.seoTitle || post.title,
       description: post.seoDescription || post.excerpt,
@@ -29,7 +29,7 @@ export default async function BlogDetailPage({ params }) {
 
   let post;
   try {
-    const { data } = await apiFetch(`/blog/${slug}`, { next: { revalidate: 60 } });
+    const { data } = await apiFetch(`/blog/${slug}`, { cache: 'no-store' });
     post = data;
   } catch (error) {
     notFound();

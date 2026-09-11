@@ -5,9 +5,11 @@ import { apiFetch } from '../../lib/apiClient';
 export const metadata = { title: 'Blog' };
 
 export default async function BlogListPage() {
-  // revalidate: 60 -> Next.js cache kết quả 60 giây, sau đó tự làm mới ở request tiếp theo
-  // (ISR). Đặt ngắn vì admin publish bài xong muốn thấy sớm, chưa có on-demand revalidate.
-  const { data: posts } = await apiFetch('/blog', { next: { revalidate: 60 } });
+  // cache: 'no-store' vì chưa có cơ chế revalidate on-demand khi admin publish bài —
+  // dùng next.revalidate sẽ khiến bài mới publish "biến mất tạm thời" tới 60s (đã tự
+  // gặp bug này với /gallery, xem log buổi 11). Đổi lại thành ISR đúng khi xây revalidate
+  // on-demand (gọi revalidatePath từ 1 Route Handler ngay sau khi admin publish).
+  const { data: posts } = await apiFetch('/blog', { cache: 'no-store' });
 
   return (
     <div>
