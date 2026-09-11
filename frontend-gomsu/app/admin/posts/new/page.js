@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authFetch } from '../../../../lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '../../../../lib/brand';
 
 async function uploadImage(file) {
   const formData = new FormData();
@@ -36,7 +37,13 @@ export default function NewPostPage() {
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      await authFetch('/blog', { method: 'POST', body: JSON.stringify(form) });
+      // Gán categoryId đúng thương hiệu — bắt buộc vì backend dùng chung DB cho cả 2 clone
+      // (xem lib/brand.js), thiếu bước này bài viết sẽ không hiện trên trang public.
+      const { data: categories } = await authFetch('/categories');
+      const category = categories.find((c) => c.slug === BRAND_CATEGORY_SLUG);
+      if (!category) throw new Error('CATEGORY_NOT_FOUND');
+
+      await authFetch('/blog', { method: 'POST', body: JSON.stringify({ ...form, categoryId: category.id }) });
       router.push('/admin/posts');
     } catch (err) {
       setErrorMsg('Lỗi khi lưu bài viết. Vui lòng kiểm tra lại (có thể trùng slug).');

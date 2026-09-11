@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { apiFetch } from '../../lib/apiClient';
+import { BRAND_CATEGORY_SLUG } from '../../lib/brand';
 
 export const metadata = { title: 'Tin tức' };
 
@@ -9,7 +10,7 @@ export default async function BlogListPage() {
   // dùng next.revalidate sẽ khiến bài mới publish "biến mất tạm thời" tới 60s (đã tự
   // gặp bug này với /gallery, xem log buổi 11). Đổi lại thành ISR đúng khi xây revalidate
   // on-demand (gọi revalidatePath từ 1 Route Handler ngay sau khi admin publish).
-  const { data: posts } = await apiFetch('/blog', { cache: 'no-store' });
+  const { data: posts } = await apiFetch(`/blog?categorySlug=${BRAND_CATEGORY_SLUG}`, { cache: 'no-store' });
 
   return (
     <div>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authFetch } from '../../../../lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '../../../../lib/brand';
 
 export default function NewGalleryItemPage() {
   const router = useRouter();
@@ -37,7 +38,14 @@ export default function NewGalleryItemPage() {
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      await authFetch('/gallery', { method: 'POST', body: JSON.stringify({ title, altText, imageUrl }) });
+      const { data: categories } = await authFetch('/categories');
+      const category = categories.find((c) => c.slug === BRAND_CATEGORY_SLUG);
+      if (!category) throw new Error('CATEGORY_NOT_FOUND');
+
+      await authFetch('/gallery', {
+        method: 'POST',
+        body: JSON.stringify({ title, altText, imageUrl, categoryId: category.id }),
+      });
       // Chuyển về trang quản lý gallery của admin
       router.push('/admin/gallery');
     } catch (err) {

@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { apiFetch } from '../../lib/apiClient';
+import { BRAND_CATEGORY_SLUG } from '../../lib/brand';
 
 export const metadata = { title: 'Bộ sưu tập' };
 
@@ -8,7 +9,7 @@ export default async function GalleryPage() {
   // dùng next.revalidate ở đây sẽ khiến ảnh mới "biến mất tạm thời" tới 60s sau khi thêm
   // (đã tự gặp bug này, xem log buổi 11). Sẽ đổi lại thành ISR đúng khi xây revalidate
   // on-demand (gọi revalidatePath từ 1 Route Handler ngay sau khi admin tạo/xoá thành công).
-  const { data: items } = await apiFetch('/gallery', { cache: 'no-store' });
+  const { data: items } = await apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}`, { cache: 'no-store' });
 
   return (
     <div>
