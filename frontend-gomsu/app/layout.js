@@ -1,5 +1,6 @@
 import { Playfair_Display, Montserrat } from 'next/font/google';
 import './globals.css';
+import Navbar from '../components/layout/Navbar';
 
 const playfair = Playfair_Display({
   subsets: ['vietnamese'],
@@ -24,20 +25,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="vi" className={`${playfair.variable} ${montserrat.variable}`}>
       <body className="font-sans bg-gomsu-background text-gomsu-text antialiased">
-        <nav className="flex gap-8 flex-wrap items-center px-6 py-5 border-b border-gomsu-border">
-          <a
-            href="/blog"
-            className="text-xs uppercase tracking-[0.2em] text-gomsu-text-muted hover:text-gomsu-primary transition-colors"
-          >
-            Tin tức
-          </a>
-          <a
-            href="/gallery"
-            className="text-xs uppercase tracking-[0.2em] text-gomsu-text-muted hover:text-gomsu-primary transition-colors"
-          >
-            Bộ sưu tập
-          </a>
-        </nav>
+        <Navbar />
         <main className="min-h-screen">{children}</main>
       </body>
     </html>
