@@ -41,12 +41,17 @@ const getBySlug = asyncHandler(async (req, res) => {
 });
 
 const adminList = asyncHandler(async (req, res) => {
-  const { page = '1', pageSize = '10', status } = req.query;
+  const { page = '1', pageSize = '10', status, categorySlug } = req.query;
   const take = Math.min(Number(pageSize) || 10, 50);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
   const where = {};
   if (status) where.status = status;
+  if (categorySlug) {
+    const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
+    if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
+    where.categoryId = category.id;
+  }
 
   const [items, total] = await Promise.all([
     prisma.blogPost.findMany({

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, getToken } from '../../../lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
 
 export default function AdminPostsPage() {
   const [posts, setPosts] = useState([]);
@@ -11,7 +12,7 @@ export default function AdminPostsPage() {
       window.location.href = '/admin/login';
       return;
     }
-    authFetch('/blog/admin/list').then((res) => setPosts(res.data || []));
+    authFetch(`/blog/admin/list?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => setPosts(res.data || []));
   }, []);
 
   return (

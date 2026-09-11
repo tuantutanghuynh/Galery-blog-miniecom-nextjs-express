@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, getToken } from '../../../lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
 
 export default function AdminGalleryPage() {
   const [items, setItems] = useState([]);
@@ -11,7 +12,7 @@ export default function AdminGalleryPage() {
       window.location.href = '/admin/login';
       return;
     }
-    authFetch('/gallery').then((res) => setItems(res.data || []));
+    authFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => setItems(res.data || []));
   }, []);
 
   return (
