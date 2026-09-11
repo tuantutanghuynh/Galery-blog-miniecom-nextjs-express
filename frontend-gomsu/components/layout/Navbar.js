@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const navLinks = [
   { name: 'Trang chủ', path: '/' },
@@ -20,9 +21,19 @@ export default function Navbar() {
   return (
     <nav className="relative flex items-center justify-between px-6 py-5 border-b border-gomsu-border">
       {/* Logo */}
-      <Link href="/" className="flex flex-col" onClick={() => setIsOpen(false)}>
-        <span className="font-serif text-2xl tracking-wide text-gomsu-primary">Nghĩa Phái</span>
-        <span className="font-sans text-[10px] uppercase tracking-widest text-gomsu-text-muted">Hơi thở Bát Tràng</span>
+      <Link href="/" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
+        <Image
+          src="/images/logo-nghia-phai-gom-su-bat-trang-v2.png"
+          alt="Logo Nghĩa Phái - Gốm sứ thủ công Bát Tràng"
+          width={44}
+          height={44}
+          className="object-contain"
+          priority
+        />
+        <div className="flex flex-col justify-center">
+          <span className="font-serif text-2xl tracking-wide text-gomsu-primary leading-none mb-1">Nghĩa Phái</span>
+          <span className="font-sans text-[10px] uppercase tracking-widest text-gomsu-text-muted leading-none">Hơi thở Bát Tràng</span>
+        </div>
       </Link>
 
       {/* Main Nav (Hidden on small screens) */}
@@ -31,7 +42,7 @@ export default function Navbar() {
           <Link
             key={link.name}
             href={link.path}
-            className="text-[10px] uppercase tracking-[0.2em] text-gomsu-text-muted hover:text-gomsu-primary transition-colors whitespace-nowrap"
+            className="text-xs uppercase tracking-[0.15em] text-gomsu-text-muted hover:text-gomsu-primary transition-colors whitespace-nowrap"
           >
             {link.name}
           </Link>
