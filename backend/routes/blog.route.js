@@ -13,10 +13,22 @@ router.post(
   '/',
   authenticate,
   requireRole('admin'),
-  [body('title').notEmpty(), body('slug').notEmpty(), body('content').notEmpty(), validate],
+  [
+    body('title').notEmpty(),
+    body('slug').notEmpty(),
+    body('content').notEmpty(),
+    body('status').optional().isIn(['draft', 'published']),
+    validate,
+  ],
   ctrl.create
 );
-router.patch('/:id', authenticate, requireRole('admin'), ctrl.update);
+router.patch(
+  '/:id',
+  authenticate,
+  requireRole('admin'),
+  [body('status').optional().isIn(['draft', 'published']), validate],
+  ctrl.update
+);
 router.delete('/:id', authenticate, requireRole('admin'), ctrl.remove);
 
 module.exports = router;
