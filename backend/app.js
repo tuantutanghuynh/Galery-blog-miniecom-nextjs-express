@@ -17,8 +17,20 @@ app.use(helmet({
 }));
 
 // 2. CORS configuration (restrict to specific origins)
+// Dự án giờ có nhiều frontend (frontend-petshop :3000, frontend-gomsu :3001, và sau này
+// là domain thật khi deploy) — dùng danh sách thay vì 1 origin cố định.
+const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:3000,http://localhost:3001')
+    .split(',')
+    .map((url) => url.trim());
+
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Update with actual frontend URL
+    origin: (origin, callback) => {
+        // Không có Origin (Postman/curl/gọi server-to-server) -> luôn cho phép
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        callback(new Error(`Origin ${origin} không được phép bởi CORS`));
+    },
     credentials: true,
 };
 app.use(cors(corsOptions));
