@@ -13,6 +13,7 @@ model User {
   fullName     String?
   role         String   @default("customer")
   createdAt    DateTime @default(now())
+  blogPosts BlogPost[]
 }
 
 model Category {
@@ -24,6 +25,8 @@ model Category {
   createdAt   DateTime @default(now())
   attributes  CategoryAttribute[]
   products    Product[]
+  blogPosts    BlogPost[]
+  galleryItems GalleryItem[]
 }
 
 model CategoryAttribute {
@@ -86,5 +89,35 @@ model RefreshToken {
   tokenHash  String
   expiresAt  DateTime
   revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model BlogPost {
+  id             String    @id @default(uuid())
+  title          String
+  slug           String    @unique
+  excerpt        String?
+  content        String
+  coverImageUrl  String?
+  authorId       String
+  author         User      @relation(fields: [authorId], references: [id])
+  categoryId     String?
+  category       Category? @relation(fields: [categoryId], references: [id])
+  status         String    @default("draft")
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model GalleryItem {
+  id         String    @id @default(uuid())
+  title      String?
+  imageUrl   String
+  altText    String
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  position   Int       @default(0)
   createdAt  DateTime  @default(now())
 }
