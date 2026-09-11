@@ -58,32 +58,43 @@ async function issueRefreshToken(userId) {
 // ASYNC FUNCTION rotateRefreshToken(rawToken):
 // Purpose: Replaces an old, valid refresh token with a new one (Token Rotation)
 async function rotateRefreshToken(rawToken) {
-    // HASH the provided 'rawToken' to get 'tokenHash'
     const tokenHash = hashToken(rawToken);
-    // AWAIT database operation to FIND the FIRST 'refreshToken' record where:
-    //   - The token hash matches 'tokenHash'
-    //   - The token has NOT been revoked ('revokedAt' is null)
-    //   - The token has NOT expired ('expiresAt' is greater than current time)
+    
+    // Find the token regardless of its revocation status
     const record = await prisma.refreshToken.findFirst({
-        where: { tokenHash, revokedAt: null, expiresAt: { gt: new Date() } }
+        where: { tokenHash }
     });
-    // IF no matching record is found:
-    //   RETURN null // The caller will handle this (e.g., return a 401 Unauthorized error)
-    if (!record) 
+
+    if (!record) {
         return null;
+    }
+
+    // Refresh Token Reuse Detection
+    if (record.revokedAt !== null) {
+        // SECURITY ALERT: A revoked token is being used!
+        // This indicates a potential token theft (Replay Attack).
+        // Action: Revoke ALL active refresh tokens for this user immediately.
+        await prisma.refreshToken.updateMany({
+            where: { userId: record.userId, revokedAt: null },
+            data: { revokedAt: new Date() }
+        });
+        return null; // Deny access, forcing the user to re-login
+    }
+
+    // Check expiration
+    if (new Date() > record.expiresAt) {
+        return null;
+    }
 
     // If valid, invalidate the old token
-    // AWAIT database operation to UPDATE the found record:
-    //   - Set 'revokedAt' to the current time
     await prisma.refreshToken.update({
         where: { id: record.id },
         data: { revokedAt: new Date() },
     });
+    
     // Issue a completely new token for the user
-    // AWAIT issueRefreshToken(record.userId) and STORE result as 'newRawToken'
-    const newRawToken =  await issueRefreshToken(record.userId);
-    // RETURN an object containing { userId, rawToken: newRawToken }
-    return { userId: record.userId, rawToken: newRawToken}
+    const newRawToken = await issueRefreshToken(record.userId);
+    return { userId: record.userId, rawToken: newRawToken };
 }
 // END FUNCTION
 
