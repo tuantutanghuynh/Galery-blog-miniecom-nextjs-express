@@ -9,8 +9,8 @@
   --color-gomsu-text-muted: #888888;
   --color-gomsu-border: #2a2a2a;
 
-  --font-serif: var(--font-playfair), serif;
-  --font-sans: var(--font-montserrat), sans-serif;
+  --font-serif: var(--font-playfair);
+  --font-sans: var(--font-montserrat);
 
   /* Vuông góc tuyệt đối — không bo góc bất kỳ thành phần nào (theo spec mục 4) */
   --radius-sm: 0px;
