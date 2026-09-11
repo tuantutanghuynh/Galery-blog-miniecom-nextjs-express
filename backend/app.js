@@ -12,7 +12,9 @@ const errorHandler = require('./middlewares/errorHandler');
 const app = express();
 
 // 1. Security Headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 // 2. CORS configuration (restrict to specific origins)
 const corsOptions = {
