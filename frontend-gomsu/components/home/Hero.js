@@ -6,8 +6,8 @@ export default function Hero() {
     <section className="relative w-full h-[80vh] min-h-[600px] flex items-center border-b border-gomsu-border overflow-hidden">
       {/* Background Image */}
       <Image
-        src="/images/hero-gomsu-art.jpg"
-        alt="Bộ sưu tập gốm sứ đương đại Nghĩa Phái - Không gian trưng bày nghệ thuật tĩnh lặng"
+        src="/images/hero-khong-gian-nghe-thuat.png"
+        alt="Không gian trưng bày nghệ thuật gốm sứ đương đại Nghĩa Phái"
         fill
         priority
         className="object-cover object-center scale-[1.02]"
@@ -18,7 +18,7 @@ export default function Hero() {
 
       {/* Nội dung Text */}
       <div className="relative z-10 px-6 w-full max-w-7xl mx-auto">
-        <h3 className="font-sans font-bold text-xs uppercase tracking-[0.2em] text-gomsu-primary mb-6">
+        <h3 className="font-sans font-bold text-xs uppercase tracking-[0.2em] text-gomsu-primary brightness-125 drop-shadow-md mb-6">
           Bát Tràng Art Atelier
         </h3>
         <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl font-medium leading-tight max-w-3xl text-white">

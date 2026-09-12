@@ -19,7 +19,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="relative flex items-center justify-between px-6 py-5 border-b border-gomsu-border">
+    <nav className="relative z-50 bg-gomsu-background flex items-center justify-between px-6 py-5 border-b border-gomsu-border">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
         <Image
