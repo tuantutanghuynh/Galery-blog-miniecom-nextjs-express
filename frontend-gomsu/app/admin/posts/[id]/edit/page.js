@@ -1,36 +1,44 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { authFetch } from '../../../../lib/adminAuth';
-import { BRAND_CATEGORY_SLUG } from '../../../../lib/brand';
+import { authFetch, getToken } from '../../../../../lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '../../../../../lib/brand';
 
 async function uploadImage(file) {
   const formData = new FormData();
   formData.append('image', file);
-  const json = await authFetch('/uploads/image', {
-    method: 'POST',
-    body: formData,
-  });
+  const json = await authFetch('/uploads/image', { method: 'POST', body: formData });
   return json.data.url;
 }
-// Chuyển tiêu đề tiếng Việt có dấu thành slug URL hợp lệ
-function slugify(str) {
-  return str
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bỏ dấu (huyền, sắc, hỏi...)
-    .replace(/đ/g, 'd').replace(/Đ/g, 'D') // đ/Đ không phải ký tự có dấu thường, xử lý riêng
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // bỏ ký tự đặc biệt còn sót
-    .trim()
-    .replace(/[\s_-]+/g, '-') // khoảng trắng/gạch dưới liên tiếp -> 1 dấu gạch ngang
-    .replace(/^-+|-+$/g, ''); // bỏ gạch ngang thừa ở đầu/cuối
-}
 
-export default function NewPostPage() {
+export default function EditPostPage({ params }) {
+  const { id } = use(params); // Next.js 16: params là Promise ngay cả ở Client Component
   const router = useRouter();
-  const [form, setForm] = useState({ title: '', slug: '', excerpt: '', content: '', coverImageUrl: '', status: 'published' });
+  const [form, setForm] = useState(null); // null = đang tải dữ liệu cũ
   const [submitting, setSubmitting] = useState(false);
-  const [slugTouched, setSlugTouched] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    if (!getToken()) {
+      router.push('/admin/login');
+      return;
+    }
+    authFetch(`/blog/admin/list?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => {
+      const post = res.data.find((p) => p.id === id);
+      if (!post) {
+        setErrorMsg('Không tìm thấy bài viết.');
+        return;
+      }
+      setForm({
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt || '',
+        content: post.content,
+        coverImageUrl: post.coverImageUrl || '',
+        status: post.status,
+      });
+    });
+  }, [id, router]);
 
   async function handleCoverUpload(e) {
     const file = e.target.files[0];
@@ -49,48 +57,32 @@ export default function NewPostPage() {
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      // Gán categoryId đúng thương hiệu — bắt buộc vì backend dùng chung DB cho cả 2 clone
-      // (xem lib/brand.js), thiếu bước này bài viết sẽ không hiện trên trang public.
-      const { data: categories } = await authFetch('/categories');
-      const category = categories.find((c) => c.slug === BRAND_CATEGORY_SLUG);
-      if (!category) throw new Error('CATEGORY_NOT_FOUND');
-
-      await authFetch('/blog', { method: 'POST', body: JSON.stringify({ ...form, categoryId: category.id }) });
+      await authFetch(`/blog/${id}`, { method: 'PATCH', body: JSON.stringify(form) });
       router.push('/admin/posts');
     } catch (err) {
-      setErrorMsg('Lỗi khi lưu bài viết. Vui lòng kiểm tra lại (có thể trùng slug).');
+      setErrorMsg('Lỗi khi cập nhật bài viết. Vui lòng kiểm tra lại (có thể trùng slug).');
     } finally {
       setSubmitting(false);
     }
   }
 
+  if (!form) return <p className="text-center mt-8">{errorMsg || 'Đang tải...'}</p>;
+
   return (
     <div className="max-w-xl mx-auto mt-8">
-      <h1 className="text-2xl font-bold mb-4">Viết bài mới</h1>
+      <h1 className="text-2xl font-bold mb-4">Sửa bài viết</h1>
       {errorMsg && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{errorMsg}</div>}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           required placeholder="Tiêu đề" value={form.title}
-          onChange={(e) => {
-            const title = e.target.value;
-            setForm((f) => ({
-              ...f,
-              title,
-              slug: slugTouched ? f.slug : slugify(title),
-            }));
-          }}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
           className="border border-gray-300 rounded px-3 py-2"
         />
-
         <input
-          required placeholder="Slug (vd: cach-chon-gom-theo-phong-thuy)" value={form.slug}
-          onChange={(e) => {
-            setSlugTouched(true);
-            setForm((f) => ({ ...f, slug: e.target.value }));
-          }}
+          required placeholder="Slug" value={form.slug}
+          onChange={(e) => setForm({ ...form, slug: e.target.value })}
           className="border border-gray-300 rounded px-3 py-2"
         />
-
         <input
           placeholder="Tóm tắt" value={form.excerpt}
           onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
@@ -101,7 +93,7 @@ export default function NewPostPage() {
           onChange={(e) => setForm({ ...form, status: e.target.value })}
           className="border border-gray-300 rounded px-3 py-2"
         >
-          <option value="published">Xuất bản ngay</option>
+          <option value="published">Xuất bản</option>
           <option value="draft">Lưu nháp</option>
         </select>
         <input type="file" accept="image/*" onChange={handleCoverUpload} />
@@ -122,7 +114,7 @@ export default function NewPostPage() {
           type="submit" disabled={submitting}
           className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
         >
-          {submitting ? 'Đang lưu...' : 'Lưu bài viết'}
+          {submitting ? 'Đang lưu...' : 'Cập nhật'}
         </button>
       </form>
     </div>

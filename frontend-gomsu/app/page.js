@@ -15,8 +15,8 @@ export const metadata = {
 
 export default async function HomePage() {
   const [{ data: galleryItems }, { data: posts }] = await Promise.all([
-    apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=4`, { cache: 'no-store' }),
-    apiFetch(`/blog?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=3`, { cache: 'no-store' }),
+    apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=8`, { cache: 'no-store' }),
+    apiFetch(`/blog?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=6`, { cache: 'no-store' }),
   ]);
 
   return (

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authFetch, getToken } from '../../../lib/adminAuth';
 import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
@@ -7,17 +8,19 @@ import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
 export default function AdminGalleryPage() {
   const [items, setItems] = useState([]);
 
+  const router = useRouter();
+
   function loadItems() {
     authFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => setItems(res.data || []));
   }
 
   useEffect(() => {
     if (!getToken()) {
-      window.location.href = '/admin/login';
+      router.push('/admin/login');
       return;
     }
     loadItems();
-  }, []);
+  }, [router]);
 
   async function handleDelete(id) {
     if (!confirm('Xoá ảnh này?')) return;

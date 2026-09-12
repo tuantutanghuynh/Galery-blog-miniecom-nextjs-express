@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { apiFetch } from '../../lib/apiClient';
 import { BRAND_CATEGORY_SLUG } from '../../lib/brand';
 
@@ -30,13 +29,14 @@ export default async function BlogListPage() {
             className="border-r border-b border-gomsu-border p-8 flex flex-col gap-4"
           >
             {post.coverImageUrl && (
-              <Image
-                src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${post.coverImageUrl}`}
-                alt={post.title}
-                width={400}
-                height={250}
-                className="w-full h-auto object-cover"
-              />
+              <Link href={`/blog/${post.slug}`} className="relative w-full aspect-[4/3] mb-2 overflow-hidden group block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${post.coverImageUrl}`}
+                  alt={post.title}
+                  className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
+                />
+              </Link>
             )}
             <div>
               <h2 className="font-serif text-2xl">

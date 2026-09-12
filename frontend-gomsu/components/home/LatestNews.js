@@ -14,8 +14,18 @@ export default function LatestNews({ posts }) {
           <Link
             key={post.id}
             href={`/blog/${post.slug}`}
-            className="border-r border-b border-gomsu-border p-8 hover:text-gomsu-primary transition-colors"
+            className="border-r border-b border-gomsu-border p-8 hover:text-gomsu-primary transition-colors block group"
           >
+            {post.coverImageUrl && (
+              <div className="relative w-full aspect-[4/3] mb-6 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${post.coverImageUrl}`}
+                  alt={post.title}
+                  className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
+                />
+              </div>
+            )}
             <h3 className="font-serif text-lg">{post.title}</h3>
             <p className="text-gomsu-text-muted text-sm mt-2 font-light line-clamp-2">
               {post.excerpt}

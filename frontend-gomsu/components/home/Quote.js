@@ -1,9 +1,26 @@
 export default function Quote() {
   return (
-    <section className="px-6 py-16 border-b border-gomsu-border text-center">
-      <p className="font-serif text-xl md:text-3xl italic max-w-2xl mx-auto leading-relaxed">
-        &ldquo;Đất có ký ức riêng của nó. Vai trò của tôi là lắng nghe và tạo hình.&rdquo;
-      </p>
+    <section 
+      className="relative px-6 py-32 md:py-40 border-b border-gomsu-border text-center bg-fixed bg-center bg-cover overflow-hidden"
+      style={{ backgroundImage: "url('/images/quote-pattern.png')" }}
+    >
+      {/* Lớp phủ làm mờ pattern để texture chìm hẳn xuống nền đen */}
+      <div className="absolute inset-0 bg-[#111111]/70"></div>
+
+      <div className="relative z-10 max-w-3xl mx-auto flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-12 text-left">
+        <div className="text-[120px] md:text-[180px] font-serif text-gomsu-text-muted/40 leading-none pt-8 hidden md:block">
+          &ldquo;
+        </div>
+        <div className="flex-1">
+          <p className="font-serif text-xl md:text-3xl italic leading-relaxed text-gray-200">
+            Đất có ký ức riêng của nó. <br className="hidden md:block" />
+            Vai trò của tôi là lắng nghe và tạo hình.
+          </p>
+          <p className="mt-6 font-serif italic text-2xl md:text-4xl text-gomsu-text-muted text-right pr-8">
+            Nguyễn Đức Nghĩa
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

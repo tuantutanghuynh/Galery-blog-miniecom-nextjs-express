@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { apiFetch } from '../../lib/apiClient';
 import { BRAND_CATEGORY_SLUG } from '../../lib/brand';
@@ -50,13 +49,12 @@ export default async function GalleryPage({ searchParams }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
-          <div key={item.id} className="border-r border-b border-gomsu-border aspect-square">
-            <Image
+          <div key={item.id} className="border-r border-b border-gomsu-border aspect-square overflow-hidden group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${item.imageUrl}`}
               alt={item.altText}
-              width={400}
-              height={400}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
           </div>
         ))}
