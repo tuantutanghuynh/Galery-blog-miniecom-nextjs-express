@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authFetch } from '../../../../lib/adminAuth';
 import { BRAND_CATEGORY_SLUG } from '../../../../lib/brand';
+import RichTextEditor from '../../../../components/admin/RichTextEditor';
+import { slugify } from '../../../../lib/slugify';
+
 
 async function uploadImage(file) {
   const formData = new FormData();
@@ -13,17 +16,7 @@ async function uploadImage(file) {
   });
   return json.data.url;
 }
-// Chuyển tiêu đề tiếng Việt có dấu thành slug URL hợp lệ
-function slugify(str) {
-  return str
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bỏ dấu (huyền, sắc, hỏi...)
-    .replace(/đ/g, 'd').replace(/Đ/g, 'D') // đ/Đ không phải ký tự có dấu thường, xử lý riêng
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // bỏ ký tự đặc biệt còn sót
-    .trim()
-    .replace(/[\s_-]+/g, '-') // khoảng trắng/gạch dưới liên tiếp -> 1 dấu gạch ngang
-    .replace(/^-+|-+$/g, ''); // bỏ gạch ngang thừa ở đầu/cuối
-}
+
 
 export default function NewPostPage() {
   const router = useRouter();
@@ -113,14 +106,16 @@ export default function NewPostPage() {
             className="max-w-[200px] rounded"
           />
         )}
-        <textarea
-          required rows={12} placeholder="Nội dung (Markdown)" value={form.content}
-          onChange={(e) => setForm({ ...form, content: e.target.value })}
-          className="border border-gray-300 rounded px-3 py-2 font-mono text-sm"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Nội dung bài viết</label>
+          <RichTextEditor
+            value={form.content}
+            onChange={(content) => setForm({ ...form, content })}
+          />
+        </div>
         <button
           type="submit" disabled={submitting}
-          className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+          className="bg-black text-white rounded px-3 py-2 disabled:opacity-50 mt-4"
         >
           {submitting ? 'Đang lưu...' : 'Lưu bài viết'}
         </button>

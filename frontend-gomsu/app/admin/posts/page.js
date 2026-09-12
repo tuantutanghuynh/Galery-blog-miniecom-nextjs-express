@@ -1,25 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { authFetch, getToken } from '../../../lib/adminAuth';
+import { authFetch } from '../../../lib/adminAuth';
 import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
 
 export default function AdminPostsPage() {
   const [posts, setPosts] = useState([]);
-  const router = useRouter();
 
   function loadPosts() {
     authFetch(`/blog/admin/list?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => setPosts(res.data || []));
   }
 
   useEffect(() => {
-    if (!getToken()) {
-      router.push('/admin/login');
-      return;
-    }
     loadPosts();
-  }, [router]);
+  }, []);
 
   async function handleDelete(id) {
     if (!confirm('Xoá bài viết này?')) return;

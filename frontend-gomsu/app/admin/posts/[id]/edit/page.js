@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { authFetch, getToken } from '../../../../../lib/adminAuth';
+import { authFetch } from '../../../../../lib/adminAuth';
 import { BRAND_CATEGORY_SLUG } from '../../../../../lib/brand';
+import RichTextEditor from '../../../../../components/admin/RichTextEditor';
 
 async function uploadImage(file) {
   const formData = new FormData();
@@ -19,10 +20,6 @@ export default function EditPostPage({ params }) {
   const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
-    if (!getToken()) {
-      router.push('/admin/login');
-      return;
-    }
     authFetch(`/blog/admin/list?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => {
       const post = res.data.find((p) => p.id === id);
       if (!post) {
@@ -38,7 +35,7 @@ export default function EditPostPage({ params }) {
         status: post.status,
       });
     });
-  }, [id, router]);
+  }, [id]);
 
   async function handleCoverUpload(e) {
     const file = e.target.files[0];
@@ -105,14 +102,16 @@ export default function EditPostPage({ params }) {
             className="max-w-[200px] rounded"
           />
         )}
-        <textarea
-          required rows={12} placeholder="Nội dung (Markdown)" value={form.content}
-          onChange={(e) => setForm({ ...form, content: e.target.value })}
-          className="border border-gray-300 rounded px-3 py-2 font-mono text-sm"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Nội dung bài viết</label>
+          <RichTextEditor
+            value={form.content}
+            onChange={(content) => setForm({ ...form, content })}
+          />
+        </div>
         <button
           type="submit" disabled={submitting}
-          className="bg-black text-white rounded px-3 py-2 disabled:opacity-50"
+          className="bg-black text-white rounded px-3 py-2 disabled:opacity-50 mt-4"
         >
           {submitting ? 'Đang lưu...' : 'Cập nhật'}
         </button>
