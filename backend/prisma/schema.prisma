@@ -90,6 +90,9 @@ model RefreshToken {
   expiresAt  DateTime
   revokedAt  DateTime?
   createdAt  DateTime  @default(now())
+
+  @@index([tokenHash])
+  @@index([userId])
 }
 
 model BlogPost {
@@ -120,4 +123,15 @@ model GalleryItem {
   category   Category? @relation(fields: [categoryId], references: [id])
   position   Int       @default(0)
   createdAt  DateTime  @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

@@ -8,7 +8,11 @@ const list = asyncHandler(async (req, res) => {
   const take = Math.min(Number(pageSize) || 10, 50);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = { status: 'published' };
+  const where = { 
+    status: 'published',
+    publishedAt: { lte: new Date() } // Lọc đi các bài được lên lịch trong tương lai
+  };
+  
   if (categorySlug) {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
@@ -34,19 +38,36 @@ const getBySlug = asyncHandler(async (req, res) => {
     where: { slug: req.params.slug },
     include: { category: true, author: { select: { id: true, fullName: true } } },
   });
-  if (!post || post.status !== 'published') {
+  
+  const isFutureScheduled = post && post.publishedAt && new Date(post.publishedAt) > new Date();
+  
+  if (!post || post.status !== 'published' || isFutureScheduled) {
     throw new ApiError(404, 'POST_NOT_FOUND', 'Không tìm thấy bài viết');
   }
   sendSuccess(res, post);
 });
 
 const adminList = asyncHandler(async (req, res) => {
-  const { page = '1', pageSize = '10', status, categorySlug } = req.query;
-  const take = Math.min(Number(pageSize) || 10, 50);
+  const { page = '1', pageSize = '20', status, categorySlug, search } = req.query;
+  const take = Math.min(Number(pageSize) || 20, 100);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
   const where = {};
-  if (status) where.status = status;
+  
+  if (search) {
+    where.title = { contains: search, mode: 'insensitive' };
+  }
+
+  if (status === 'draft') {
+    where.status = 'draft';
+  } else if (status === 'published') {
+    where.status = 'published';
+    where.publishedAt = { lte: new Date() };
+  } else if (status === 'scheduled') {
+    where.status = 'published';
+    where.publishedAt = { gt: new Date() };
+  }
+
   if (categorySlug) {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
@@ -68,7 +89,7 @@ const adminList = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const { title, slug, excerpt, content, coverImageUrl, categoryId, seoTitle, seoDescription, status } = req.body;
+  const { title, slug, excerpt, content, coverImageUrl, categoryId, seoTitle, seoDescription, status, publishedAt } = req.body;
 
   // Kiểm tra trùng lặp Slug
   if (slug) {
@@ -76,6 +97,12 @@ const create = asyncHandler(async (req, res) => {
     if (existingSlug) {
       throw new ApiError(409, 'SLUG_TAKEN', 'Slug đã tồn tại, vui lòng chọn slug khác');
     }
+  }
+  
+  // Xác định ngày xuất bản
+  let finalPublishedAt = null;
+  if (status === 'published') {
+    finalPublishedAt = publishedAt ? new Date(publishedAt) : new Date();
   }
 
   const post = await prisma.blogPost.create({
@@ -90,7 +117,7 @@ const create = asyncHandler(async (req, res) => {
       seoDescription,
       authorId: req.user.id,
       status: status || 'draft',
-      publishedAt: status === 'published' ? new Date() : null,
+      publishedAt: finalPublishedAt,
     },
   });
   sendSuccess(res, post, null, 201);
@@ -101,7 +128,7 @@ const update = asyncHandler(async (req, res) => {
   const existing = await prisma.blogPost.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'POST_NOT_FOUND', 'Không tìm thấy bài viết');
 
-  const { title, slug, excerpt, content, coverImageUrl, categoryId, seoTitle, seoDescription, status } = req.body;
+  const { title, slug, excerpt, content, coverImageUrl, categoryId, seoTitle, seoDescription, status, publishedAt } = req.body;
 
   // Kiểm tra trùng lặp Slug (nếu slug bị thay đổi)
   if (slug && slug !== existing.slug) {
@@ -111,7 +138,6 @@ const update = asyncHandler(async (req, res) => {
     }
   }
 
-  // Bóc tách field explicitly thay vì dùng { ...req.body } (ngăn chặn Mass Assignment)
   const data = {
     title,
     slug,
@@ -124,12 +150,15 @@ const update = asyncHandler(async (req, res) => {
     status
   };
 
-  // publishedAt chỉ set 1 lần, đúng lúc chuyển draft -> published
-  if (status === 'published' && existing.status !== 'published') {
+  if (publishedAt) {
+    data.publishedAt = new Date(publishedAt);
+  } else if (status === 'published' && existing.status !== 'published') {
     data.publishedAt = new Date();
+  } else if (status === 'draft') {
+    data.publishedAt = null;
   }
 
-  // Loại bỏ các key undefined để tránh ghi đè dữ liệu cũ bằng null
+  // Loại bỏ các key undefined
   Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
 
   const post = await prisma.blogPost.update({ where: { id }, data });

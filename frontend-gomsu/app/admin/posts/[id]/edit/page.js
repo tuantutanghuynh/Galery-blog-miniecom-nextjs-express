@@ -33,6 +33,7 @@ export default function EditPostPage({ params }) {
         content: post.content,
         coverImageUrl: post.coverImageUrl || '',
         status: post.status,
+        publishedAt: post.publishedAt || null,
       });
     });
   }, [id]);
@@ -66,55 +67,102 @@ export default function EditPostPage({ params }) {
   if (!form) return <p className="text-center mt-8">{errorMsg || 'Đang tải...'}</p>;
 
   return (
-    <div className="max-w-xl mx-auto mt-8">
-      <h1 className="text-2xl font-bold mb-4">Sửa bài viết</h1>
-      {errorMsg && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{errorMsg}</div>}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          required placeholder="Tiêu đề" value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          className="border border-gray-300 rounded px-3 py-2"
-        />
-        <input
-          required placeholder="Slug" value={form.slug}
-          onChange={(e) => setForm({ ...form, slug: e.target.value })}
-          className="border border-gray-300 rounded px-3 py-2"
-        />
-        <input
-          placeholder="Tóm tắt" value={form.excerpt}
-          onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
-          className="border border-gray-300 rounded px-3 py-2"
-        />
-        <select
-          value={form.status}
-          onChange={(e) => setForm({ ...form, status: e.target.value })}
-          className="border border-gray-300 rounded px-3 py-2"
-        >
-          <option value="published">Xuất bản</option>
-          <option value="draft">Lưu nháp</option>
-        </select>
-        <input type="file" accept="image/*" onChange={handleCoverUpload} />
-        {form.coverImageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${form.coverImageUrl}`}
-            alt="preview"
-            className="max-w-[200px] rounded"
-          />
-        )}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Nội dung bài viết</label>
-          <RichTextEditor
-            value={form.content}
-            onChange={(content) => setForm({ ...form, content })}
+    <div className="max-w-3xl mx-auto mt-8">
+      <h1 className="text-3xl font-serif text-gray-900 tracking-wide mb-8">Sửa bài viết</h1>
+      {errorMsg && <div className="mb-6 p-4 bg-red-100 border border-red-200 text-red-700 rounded">{errorMsg}</div>}
+      
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* Title */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm uppercase tracking-widest text-gray-500 font-medium">Tiêu đề bài viết</label>
+          <input
+            required placeholder="Nhập tiêu đề..." value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="bg-white border border-gray-300 text-gray-900 px-4 py-3 focus:outline-none focus:border-black rounded transition-colors font-serif text-lg"
           />
         </div>
-        <button
-          type="submit" disabled={submitting}
-          className="bg-black text-white rounded px-3 py-2 disabled:opacity-50 mt-4"
-        >
-          {submitting ? 'Đang lưu...' : 'Cập nhật'}
-        </button>
+
+        {/* Slug & Excerpt */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm uppercase tracking-widest text-gray-500 font-medium">Đường dẫn (Slug)</label>
+            <input
+              required placeholder="vd: cach-chon-gom..." value={form.slug}
+              onChange={(e) => setForm({ ...form, slug: e.target.value })}
+              className="bg-white border border-gray-300 text-gray-900 px-4 py-3 focus:outline-none focus:border-black rounded transition-colors text-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm uppercase tracking-widest text-gray-500 font-medium">Tóm tắt ngắn</label>
+            <input
+              placeholder="Nhập tóm tắt..." value={form.excerpt}
+              onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
+              className="bg-white border border-gray-300 text-gray-900 px-4 py-3 focus:outline-none focus:border-black rounded transition-colors text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Status & Schedule */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border border-gray-200 bg-gray-50 rounded">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm uppercase tracking-widest text-gray-500 font-medium">Trạng thái</label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              className="bg-white border border-gray-300 text-gray-900 px-4 py-3 focus:outline-none focus:border-black rounded transition-colors text-sm"
+            >
+              <option value="published">Xuất bản</option>
+              <option value="draft">Lưu nháp</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm uppercase tracking-widest text-gray-500 font-medium">Hẹn giờ đăng</label>
+            <input
+              type="datetime-local"
+              value={form.publishedAt ? new Date(new Date(form.publishedAt).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
+              onChange={(e) => setForm({ ...form, publishedAt: e.target.value ? new Date(e.target.value).toISOString() : null })}
+              className="bg-white border border-gray-300 text-gray-900 px-4 py-3 focus:outline-none focus:border-black rounded transition-colors text-sm"
+              disabled={form.status !== 'published'}
+            />
+          </div>
+        </div>
+
+        {/* Cover Image */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm uppercase tracking-widest text-gray-500 font-medium">Ảnh đại diện (Thumbnail)</label>
+          <div className="flex items-center gap-6">
+            {form.coverImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${form.coverImageUrl}`}
+                alt="preview"
+                className="w-32 h-32 object-cover border border-gray-200 rounded"
+              />
+            )}
+            <input type="file" accept="image/*" onChange={handleCoverUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border file:border-gray-300 file:rounded file:text-sm file:font-medium file:bg-white file:text-gray-700 hover:file:bg-gray-50 file:transition-colors file:cursor-pointer" />
+          </div>
+        </div>
+
+        {/* Content Editor */}
+        <div className="flex flex-col gap-2 mt-4">
+          <label className="text-sm uppercase tracking-widest text-gray-500 font-medium">Nội dung bài viết</label>
+          <div className="admin-light-editor-wrapper">
+            <RichTextEditor
+              value={form.content}
+              onChange={(content) => setForm({ ...form, content })}
+            />
+          </div>
+        </div>
+
+        {/* Submit */}
+        <div className="pt-6 border-t border-gray-200 flex justify-end">
+          <button
+            type="submit" disabled={submitting}
+            className="bg-black text-white px-8 py-3 text-sm uppercase tracking-widest font-medium rounded hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Đang xử lý...' : 'Cập nhật'}
+          </button>
+        </div>
       </form>
     </div>
   );

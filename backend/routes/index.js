@@ -5,7 +5,6 @@ router.use('/categories', require('./category.route'));
 router.use('/blog', require('./blog.route'));
 router.use('/uploads', require('./upload.route'));
 router.use('/gallery', require('./gallery.route'));
-
-
+router.use('/contact', require('./contact.route'));
 
 module.exports = router;

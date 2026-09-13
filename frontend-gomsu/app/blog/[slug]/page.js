@@ -1,5 +1,5 @@
 import { apiFetch } from '../../../lib/apiClient';
-import { renderMarkdown, excerptFromContent } from '../../../lib/markdown';
+import { renderHtml, excerptFromContent } from '../../../lib/markdown';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ params }) {
@@ -38,7 +38,7 @@ export default async function BlogDetailPage({ params }) {
     notFound();
   }
 
-  const html = renderMarkdown(post.content);
+  const html = renderHtml(post.content);
 
   const jsonLd = {
     '@context': 'https://schema.org',

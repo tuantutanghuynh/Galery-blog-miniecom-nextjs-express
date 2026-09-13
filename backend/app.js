@@ -10,6 +10,7 @@ const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
+app.set("trust proxy", 1);
 
 // 1. Security Headers
 app.use(helmet({
@@ -48,7 +49,8 @@ const apiLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 
 app.use(logger('dev'));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 

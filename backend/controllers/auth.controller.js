@@ -154,7 +154,39 @@ const logout = asyncHandler(async (req, res) => {
 // END FUNCTION
 
 // ==========================================
-// 6. EXPORT MODULE
+// 6. FUNCTION: CHANGE PASSWORD
 // ==========================================
-// EXPORT the 'register', 'login', 'refresh', and 'logout' functions to be used as route handlers
-module.exports = { register, login, refresh, logout}
+const changePassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new ApiError(404, 'USER_NOT_FOUND', 'Không tìm thấy tài khoản');
+
+    const match = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!match) throw new ApiError(400, 'INVALID_PASSWORD', 'Mật khẩu cũ không chính xác');
+
+    if (oldPassword === newPassword) {
+        throw new ApiError(400, 'SAME_PASSWORD', 'Mật khẩu mới không được trùng với mật khẩu cũ');
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash: newPasswordHash }
+    });
+
+    // Thu hồi toàn bộ Refresh Token của user này để buộc đăng nhập lại trên các thiết bị khác
+    await prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() }
+    });
+
+    sendSuccess(res, { message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.' });
+});
+
+// ==========================================
+// 7. EXPORT MODULE
+// ==========================================
+// EXPORT the 'register', 'login', 'refresh', 'logout', and 'changePassword' functions
+module.exports = { register, login, refresh, logout, changePassword };
