@@ -16,7 +16,9 @@ const list = asyncHandler(async (req, res) => {
   if (categorySlug) {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
-    where.categoryId = category.id;
+    const children = await prisma.category.findMany({ where: { parentId: category.id } });
+    const categoryIds = [category.id, ...children.map(c => c.id)];
+    where.categoryId = { in: categoryIds };
   }
 
   const [items, total] = await Promise.all([
@@ -71,7 +73,9 @@ const adminList = asyncHandler(async (req, res) => {
   if (categorySlug) {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
-    where.categoryId = category.id;
+    const children = await prisma.category.findMany({ where: { parentId: category.id } });
+    const categoryIds = [category.id, ...children.map(c => c.id)];
+    where.categoryId = { in: categoryIds };
   }
 
   const [items, total] = await Promise.all([

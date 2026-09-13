@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { name: 'Gallery', path: '/admin/gallery' },
   { name: 'Danh mục', path: '/admin/categories' },
   { name: 'Khách liên hệ', path: '/admin/contacts' },
+  { name: 'Cài đặt', path: '/admin/settings' },
 ];
 
 export default function AdminLayout({ children }) {

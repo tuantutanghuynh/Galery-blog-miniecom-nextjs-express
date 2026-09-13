@@ -14,7 +14,12 @@ const list = asyncHandler(async (req, res) => {
   if (categorySlug) {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
-    where.categoryId = category.id;
+    
+    // Tìm thêm các danh mục con (ví dụ: Bình Gốm, Lọ Hoa...)
+    const children = await prisma.category.findMany({ where: { parentId: category.id } });
+    const categoryIds = [category.id, ...children.map(c => c.id)];
+    
+    where.categoryId = { in: categoryIds };
   }
 
   const [items, total] = await Promise.all([
@@ -39,6 +44,41 @@ const create = asyncHandler(async (req, res) => {
   sendSuccess(res, item, null, 201);
 });
 
+const getById = asyncHandler(async (req, res) => {
+  const item = await prisma.galleryItem.findUnique({ where: { id: req.params.id } });
+  if (!item) throw new ApiError(404, 'GALLERY_ITEM_NOT_FOUND', 'Không tìm thấy ảnh');
+  sendSuccess(res, item);
+});
+
+const update = asyncHandler(async (req, res) => {
+  const { title, imageUrl, altText, categoryId, position } = req.body;
+  const existing = await prisma.galleryItem.findUnique({ where: { id: req.params.id } });
+  if (!existing) throw new ApiError(404, 'GALLERY_ITEM_NOT_FOUND', 'Không tìm thấy ảnh');
+
+  // Nêu đổi ảnh, xoá ảnh cũ
+  if (imageUrl && existing.imageUrl !== imageUrl && existing.imageUrl.startsWith('/uploads/')) {
+    const filename = existing.imageUrl.replace('/uploads/', '');
+    const filePath = path.join(__dirname, '..', 'public', 'uploads', filename);
+    try {
+      await fs.unlink(filePath);
+    } catch (err) {
+      console.error(`Lỗi khi xoá file ảnh cũ: ${filePath}`, err);
+    }
+  }
+
+  const updated = await prisma.galleryItem.update({
+    where: { id: req.params.id },
+    data: { 
+      title: title !== undefined ? title : existing.title, 
+      imageUrl: imageUrl || existing.imageUrl, 
+      altText: altText || existing.altText, 
+      categoryId: categoryId !== undefined ? categoryId : existing.categoryId, 
+      position: position !== undefined ? position : existing.position 
+    },
+  });
+  sendSuccess(res, updated);
+});
+
 const remove = asyncHandler(async (req, res) => {
   const existing = await prisma.galleryItem.findUnique({ where: { id: req.params.id } });
   if (!existing) throw new ApiError(404, 'GALLERY_ITEM_NOT_FOUND', 'Không tìm thấy ảnh');
@@ -61,4 +101,4 @@ const remove = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xoá ảnh' });
 });
 
-module.exports = { list, create, remove };
+module.exports = { list, create, getById, update, remove };

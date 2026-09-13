@@ -53,7 +53,12 @@ export default function AdminGalleryPage() {
                 
                 {/* Nút hành động */}
                 <div className="flex justify-end gap-3 mt-4">
-                  {/* Nếu sau này cần nút Sửa thì thêm ở đây */}
+                  <Link 
+                    href={`/admin/gallery/${item.id}/edit`}
+                    className="bg-white/90 text-black px-4 py-2 text-xs font-bold uppercase tracking-widest rounded hover:bg-white transition-colors backdrop-blur-sm shadow-sm"
+                  >
+                    Sửa
+                  </Link>
                   <button 
                     onClick={() => handleDelete(item.id)} 
                     className="bg-red-600/90 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest rounded hover:bg-red-600 transition-colors backdrop-blur-sm shadow-sm"
