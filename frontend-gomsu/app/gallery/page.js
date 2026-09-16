@@ -11,14 +11,24 @@ export const metadata = {
 };
 
 export default async function GalleryPage({ searchParams }) {
-  const { category: selectedSlug } = await searchParams; // Next.js 16: searchParams là Promise
+  const { category: selectedSlug } = await searchParams;
 
-  const { data: categories } = await apiFetch('/categories', { cache: 'no-store' });
-  const brand = categories.find((c) => c.slug === BRAND_CATEGORY_SLUG);
-  const subCategories = categories.filter((c) => c.parentId === brand?.id);
+  let categories = [];
+  let items = [];
+  let subCategories = [];
 
-  const activeSlug = selectedSlug || BRAND_CATEGORY_SLUG;
-  const { data: items } = await apiFetch(`/gallery?categorySlug=${activeSlug}`, { cache: 'no-store' });
+  try {
+    const catRes = await apiFetch('/categories', { cache: 'no-store' });
+    categories = catRes.data || [];
+    const brand = categories.find((c) => c.slug === BRAND_CATEGORY_SLUG);
+    subCategories = categories.filter((c) => c.parentId === brand?.id);
+
+    const activeSlug = selectedSlug || BRAND_CATEGORY_SLUG;
+    const itemsRes = await apiFetch(`/gallery?categorySlug=${activeSlug}`, { cache: 'no-store' });
+    items = itemsRes.data || [];
+  } catch (error) {
+    console.error('Lỗi tải gallery:', error.message);
+  }
 
   return (
     <div>
