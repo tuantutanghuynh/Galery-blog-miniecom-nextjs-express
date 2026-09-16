@@ -39,13 +39,12 @@ app.use(helmet({
 // frontends (frontend-petshop on :3000, frontend-gomsu on :3001, plus the real domains after
 // deploy). Requests with no Origin header — curl, Postman, server-to-server — are allowed
 // through, since the header is only sent by browsers and blocking them would break tooling.
-const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:3000,http://localhost:3001')
-    .split(',')
-    .map((url) => url.trim());
+const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:3000,http://localhost:3001').split(',');
 
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Allow no origin (Postman, S2S), specific allowed origins, or any Vercel domain
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
             return callback(null, true);
         }
         callback(new Error(`Origin ${origin} không được phép bởi CORS`));
