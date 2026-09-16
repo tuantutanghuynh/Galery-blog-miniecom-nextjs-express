@@ -6,12 +6,12 @@ import Image from 'next/image';
 
 const navLinks = [
   { name: 'Trang chủ', path: '/' },
-  { name: 'Nghệ thuật', path: '/art' },
-  { name: 'Xưởng sản xuất', path: '/workshop' },
+  // { name: 'Nghệ thuật', path: '/art' },
+  // { name: 'Xưởng sản xuất', path: '/workshop' },
   { name: 'Bộ sưu tập', path: '/gallery' },
-  { name: 'Dự án', path: '/projects' },
+  // { name: 'Dự án', path: '/projects' },
   { name: 'Tin tức', path: '/blog' },
-  { name: 'Về chúng tôi', path: '/about' },
+  // { name: 'Về chúng tôi', path: '/about' },
   { name: 'Liên hệ', path: '/contact' },
 ];
 
