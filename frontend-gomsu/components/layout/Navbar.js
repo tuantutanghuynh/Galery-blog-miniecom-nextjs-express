@@ -37,12 +37,12 @@ export default function Navbar() {
       </Link>
 
       {/* Main Nav (Hidden on small screens) */}
-      <div className="hidden lg:flex items-center gap-6">
+      <div className="hidden lg:flex items-center gap-10">
         {navLinks.map((link) => (
           <Link
             key={link.name}
             href={link.path}
-            className="text-xs uppercase tracking-[0.15em] text-gomsu-text-muted hover:text-gomsu-primary transition-colors whitespace-nowrap"
+            className="text-xs font-medium uppercase tracking-[0.2em] text-gomsu-text-muted hover:text-gomsu-primary transition-colors whitespace-nowrap"
           >
             {link.name}
           </Link>
