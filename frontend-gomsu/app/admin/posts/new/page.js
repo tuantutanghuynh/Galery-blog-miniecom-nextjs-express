@@ -152,7 +152,7 @@ export default function NewPostPage() {
           <div className="admin-light-editor-wrapper">
             <RichTextEditor
               value={form.content}
-              onChange={(content) => setForm({ ...form, content })}
+              onChange={(content) => setForm((f) => ({ ...f, content }))}
             />
           </div>
         </div>
