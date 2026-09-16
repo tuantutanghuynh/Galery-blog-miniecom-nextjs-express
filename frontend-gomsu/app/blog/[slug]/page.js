@@ -14,6 +14,9 @@ export async function generateMetadata({ params }) {
     return {
       title: post.seoTitle || post.title,
       description,
+      alternates: {
+        canonical: `/blog/${slug}`,
+      },
       openGraph: {
         title: post.seoTitle || post.title,
         description,
@@ -51,12 +54,23 @@ export default async function BlogDetailPage({ params }) {
     headline: post.title,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
-    ...(authorName && { author: { '@type': 'Person', name: authorName } }),
+    ...(post.author?.fullName && { author: { '@type': 'Person', name: post.author.fullName } }),
+  };
+
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/blog` },
+      { '@type': 'ListItem', position: 3, name: post.title }
+    ]
   };
 
   return (
     <article className="max-w-3xl mx-auto px-6 py-16">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
         Nghĩa Phái Art &amp; Design
       </h3>

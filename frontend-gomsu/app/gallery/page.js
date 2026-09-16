@@ -3,7 +3,12 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/apiClient';
 import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 
-export const metadata = { title: 'Bộ sưu tập' };
+export const metadata = { 
+  title: 'Bộ sưu tập',
+  alternates: {
+    canonical: '/gallery',
+  },
+};
 
 export default async function GalleryPage({ searchParams }) {
   const { category: selectedSlug } = await searchParams; // Next.js 16: searchParams là Promise
