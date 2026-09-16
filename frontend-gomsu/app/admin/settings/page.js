@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { authFetch, clearTokens } from '../../../lib/adminAuth';
+import { authFetch, clearTokens } from '@/lib/adminAuth';
 import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {

@@ -1,8 +1,9 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { authFetch } from '../../../lib/adminAuth';
-import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
+import { authFetch } from '@/lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 
 export default function AdminGalleryPage() {
   const [items, setItems] = useState([]);
@@ -39,7 +40,7 @@ export default function AdminGalleryPage() {
               {/* Ảnh - Không bị bóp méo nhờ object-cover */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${item.imageUrl}`}
+                src={getImageUrl(item.imageUrl)}
                 alt={item.altText}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />

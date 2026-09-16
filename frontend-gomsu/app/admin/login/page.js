@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '../../../lib/apiClient';
-import { setTokens } from '../../../lib/adminAuth';
+import { apiFetch } from '@/lib/apiClient';
+import { setTokens } from '@/lib/adminAuth';
 
 export default function AdminLoginPage() {
   const router = useRouter();

@@ -2,7 +2,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getToken, getRefreshToken, clearTokens } from '../../lib/adminAuth';
+import { getToken, getRefreshToken, clearTokens } from '@/lib/adminAuth';
 
 const NAV_ITEMS = [
   { name: 'Bài viết', path: '/admin/posts' },

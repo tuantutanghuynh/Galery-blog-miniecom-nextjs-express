@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { authFetch } from '../../../lib/adminAuth';
-import { apiFetch } from '../../../lib/apiClient';
-import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
-import { slugify } from '../../../lib/slugify';
+import { authFetch } from '@/lib/adminAuth';
+import { apiFetch } from '@/lib/apiClient';
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
+import { slugify } from '@/lib/slugify';
 
 export default function AdminCategoriesPage() {
   const [brand, setBrand] = useState(null);

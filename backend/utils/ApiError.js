@@ -1,34 +1,21 @@
-// ==========================================
-// 1. DEFINE CUSTOM ERROR CLASS
-// ==========================================
-// CLASS ApiError EXTENDS the built-in 'Error' class:
-// Purpose: Represents a "known" application error (something we deliberately
-// threw, as opposed to an unexpected bug/crash) that carries everything the
-// centralized errorHandler needs to build a proper HTTP response.
-class ApiError extends Error {
-  // CONSTRUCTOR(status, code, message, details = null):
-  //   - status: the HTTP status code to respond with (e.g. 404, 401, 422)
-  //   - code: a short machine-readable string identifying the error type
-  //     (e.g. 'NOT_FOUND', 'INVALID_CREDENTIALS') — used by clients to branch
-  //     logic without parsing the human-readable message
-  //   - message: human-readable description shown to the caller
-  //   - details: optional extra data (e.g. field-level validation errors)
-  constructor(status, code, message, details = null) {
-    // CALL the parent Error constructor with 'message' so error.message,
-    // stack traces, etc. still work normally
-    super(message);
+// Error type for every failure this API raises on purpose, as opposed to an unexpected
+// crash. It carries the three things the central error handler needs to build a response:
+// an HTTP status, a stable machine-readable code, and a human-readable message.
 
-    // ATTACH the extra fields onto 'this' so the errorHandler can read them
-    // back later via `err.status`, `err.code`, `err.details`
+// Builds an error that the error handler can turn straight into an HTTP response. `status`
+// is the HTTP status to send, `code` is a stable SNAKE_CASE identifier the frontend can
+// branch on without parsing prose, `message` is the text shown to the user, and `details`
+// carries optional extra payload such as the field-level errors from express-validator.
+// It extends the built-in Error so stack traces and `instanceof` checks keep working —
+// that `instanceof` check is exactly how the error handler tells a deliberate failure
+// apart from a genuine bug, and it decides whether the real message reaches the client.
+class ApiError extends Error {
+  constructor(status, code, message, details = null) {
+    super(message);
     this.status = status;
     this.code = code;
     this.details = details;
   }
 }
 
-// ==========================================
-// 2. EXPORT MODULE
-// ==========================================
-// EXPORT the 'ApiError' class so controllers/services can do
-// `throw new ApiError(404, 'NOT_FOUND', '...')` anywhere in the app
 module.exports = ApiError;

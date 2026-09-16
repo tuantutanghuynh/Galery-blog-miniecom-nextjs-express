@@ -39,15 +39,7 @@ export default function ContactPage() {
           
           {/* Cột trái: Hình ảnh nghệ thuật với viền mờ */}
           <div className="relative w-full h-[50vh] lg:h-[75vh] flex items-center justify-center">
-            <div 
-              className="relative w-full h-full"
-              style={{
-                WebkitMaskImage: 'linear-gradient(to right, transparent, black 25%, black 75%, transparent), linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)',
-                WebkitMaskComposite: 'source-in',
-                maskImage: 'linear-gradient(to right, transparent, black 25%, black 75%, transparent), linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)',
-                maskComposite: 'intersect'
-              }}
-            >
+            <div className="relative w-full h-full edge-fade-mask">
               <Image
                 src="/images/contact-art.jpg"
                 alt="Nghệ thuật gốm sứ Bát Tràng"

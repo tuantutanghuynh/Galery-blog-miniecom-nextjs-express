@@ -1,7 +1,8 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { authFetch } from '../../../../../lib/adminAuth';
+import { authFetch } from '@/lib/adminAuth';
 import { use } from 'react';
 
 export default function EditGalleryItemPage({ params }) {
@@ -121,7 +122,7 @@ export default function EditGalleryItemPage({ params }) {
               <label className="text-xs uppercase tracking-widest text-gray-400 mb-2 block">Bản xem trước</label>
               <div className="w-48 h-48 bg-white border border-gray-200 rounded p-1 shadow-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${imageUrl}`} alt="preview" className="w-full h-full object-cover rounded-sm" />
+                <img src={getImageUrl(imageUrl)} alt="preview" className="w-full h-full object-cover rounded-sm" />
               </div>
             </div>
           )}

@@ -1,8 +1,9 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { authFetch } from '../../../lib/adminAuth';
-import { BRAND_CATEGORY_SLUG } from '../../../lib/brand';
+import { authFetch } from '@/lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 
 function getWeekDays(offset = 0) {
   const today = new Date();
@@ -155,7 +156,7 @@ export default function AdminPostsPage() {
                   <div className="w-24 h-24 shrink-0 bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center rounded">
                     {post.coverImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${post.coverImageUrl}`} alt={post.title} className="w-full h-full object-cover" />
+                      <img src={getImageUrl(post.coverImageUrl)} alt={post.title} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-xs text-gray-400">Trống</span>
                     )}

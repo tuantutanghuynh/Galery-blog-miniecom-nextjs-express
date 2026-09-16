@@ -1,3 +1,4 @@
+import { getImageUrl } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function FeaturedWorks({ items }) {
@@ -14,7 +15,7 @@ export default function FeaturedWorks({ items }) {
           <div key={item.id} className="relative border-r border-b border-gomsu-border aspect-square overflow-hidden group bg-black/20">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${item.imageUrl}`}
+              src={getImageUrl(item.imageUrl)}
               alt={item.altText}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />

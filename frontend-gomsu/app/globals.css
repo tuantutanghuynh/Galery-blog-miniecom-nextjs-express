@@ -30,4 +30,19 @@ body {
   color: #000000;
 }
 
+/* Làm mờ dần cả 4 cạnh ảnh để ảnh tan vào nền tối thay vì cắt vuông cạnh.
+   Dùng 2 lớp mask (ngang + dọc) giao nhau; phải khai cả bản -webkit- vì Safari/iOS
+   chưa hỗ trợ thuộc tính mask chuẩn. Tailwind không diễn đạt được mask-composite
+   nên phần này viết CSS trực tiếp thay vì inline style. */
+.edge-fade-mask {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, black 25%, black 75%, transparent),
+    linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, black 25%, black 75%, transparent),
+    linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+  mask-composite: intersect;
+}
+
 

@@ -3,7 +3,16 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/ApiResponse');
 
-// Khách gửi tin nhắn
+// Handles the public contact form and the admin inbox that reads it. This is the only place
+// in the API where an anonymous visitor writes to the database, so the submit path carries
+// its own anti-spam measures on top of the rate limiter mounted in the route file.
+
+// Accepts a message from the public contact form. `website_url` is a honeypot: the field is
+// hidden from real users by CSS, so anything filling it is an automated bot — the request is
+// answered with a normal success response and quietly discarded, because a visible rejection
+// would just teach the bot to skip the field next time. Name, email and message are checked
+// here rather than left to express-validator to keep the honeypot short-circuit above them.
+// Nothing is emailed anywhere; messages wait in the database for the admin inbox below.
 const submitContact = asyncHandler(async (req, res) => {
   const { name, email, phone, subject, message, website_url } = req.body;
 
@@ -24,7 +33,12 @@ const submitContact = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Tin nhắn đã được gửi.' }, null, 201);
 });
 
-// Admin lấy danh sách tin nhắn
+// Admin-only listing of received messages, newest first, with pagination counters in `meta`.
+// The optional `isRead` query param arrives as the string `"true"` or `"false"` and is
+// compared as such, since query strings are never real booleans; an empty value means "no
+// filter" so the UI can offer an "all" option. Unlike blog and gallery, there is no brand
+// filter here — the contact table has no category, so both storefronts would share this
+// inbox if the second one ever goes live.
 const adminList = asyncHandler(async (req, res) => {
   const { page = '1', pageSize = '20', isRead } = req.query;
   const take = Math.min(Number(pageSize) || 20, 100);
@@ -48,7 +62,10 @@ const adminList = asyncHandler(async (req, res) => {
   sendSuccess(res, items, { page: Number(page), pageSize: take, total });
 });
 
-// Admin đánh dấu đã đọc
+// Flags one message as read, which is what dims it in the admin inbox. The row is fetched
+// first so an unknown id answers 404 instead of the 500 Prisma throws when `update` matches
+// nothing. The flag only ever moves from false to true — there is no "mark as unread" —
+// because the inbox uses it purely to highlight what has not been looked at yet.
 const markAsRead = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const existing = await prisma.contactMessage.findUnique({ where: { id } });
@@ -62,7 +79,9 @@ const markAsRead = asyncHandler(async (req, res) => {
   sendSuccess(res, updated);
 });
 
-// Admin xoá tin nhắn
+// Permanently deletes a message, used to clear spam that slipped past the honeypot. The
+// existence check again exists to turn a stale id into a clean 404. There is no soft delete
+// and no undo, so the admin UI asks for confirmation before calling this.
 const remove = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const existing = await prisma.contactMessage.findUnique({ where: { id } });

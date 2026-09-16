@@ -1,6 +1,7 @@
+import { getImageUrl } from '@/lib/utils';
 import Link from 'next/link';
-import { apiFetch } from '../../lib/apiClient';
-import { BRAND_CATEGORY_SLUG } from '../../lib/brand';
+import { apiFetch } from '@/lib/apiClient';
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 
 export const metadata = { title: 'Bộ sưu tập' };
 
@@ -52,7 +53,7 @@ export default async function GalleryPage({ searchParams }) {
           <div key={item.id} className="border-r border-b border-gomsu-border aspect-square overflow-hidden group">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${item.imageUrl}`}
+              src={getImageUrl(item.imageUrl)}
               alt={item.altText}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />

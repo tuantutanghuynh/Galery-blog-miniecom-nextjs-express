@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { authFetch } from '../../../lib/adminAuth';
+import { authFetch } from '@/lib/adminAuth';
 
 export default function AdminContactsPage() {
   const [contacts, setContacts] = useState([]);

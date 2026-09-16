@@ -1,9 +1,6 @@
 export default function Quote() {
   return (
-    <section 
-      className="relative px-6 py-32 md:py-40 border-b border-gomsu-border text-center bg-fixed bg-center bg-cover overflow-hidden"
-      style={{ backgroundImage: "url('/images/quote-pattern.png')" }}
-    >
+    <section className="relative px-6 py-32 md:py-40 border-b border-gomsu-border text-center bg-fixed bg-center bg-cover overflow-hidden bg-[url('/images/quote-pattern.png')]">
       {/* Lớp phủ làm mờ pattern để texture chìm hẳn xuống nền đen */}
       <div className="absolute inset-0 bg-[#111111]/70"></div>
 

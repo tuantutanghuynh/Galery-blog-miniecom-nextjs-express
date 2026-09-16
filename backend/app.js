@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
@@ -9,24 +10,41 @@ const routes = require('./routes');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
+// Assembles the Express application: security layers, body parsing, the API routes and the
+// error handling chain, in that order. Middleware order is the whole point of this file —
+// each block below runs on every request in the order it is registered, and several of the
+// bugs this project has already hit came from registering something in the wrong position.
+
 const app = express();
+
+// Tells Express to trust the reverse proxy in front of the app (Render, Vercel) so that
+// `req.ip` is the real client IP taken from `X-Forwarded-For` instead of the proxy's own
+// address. Without it every request in production looks like it comes from a single IP, so
+// the rate limiters below would count all users into one shared bucket and one busy visitor
+// would lock everybody else out.
 app.set("trust proxy", 1);
 
-// 1. Security Headers
+// Gzip nén dung lượng API
+app.use(compression());
+
+// Sets the standard security headers (HSTS, X-Frame-Options, and friends). The default
+// cross-origin resource policy is relaxed to `cross-origin` because the frontend runs on a
+// different origin and would otherwise be blocked from loading files served from `/uploads`.
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
-// 2. CORS configuration (restrict to specific origins)
-// Dự án giờ có nhiều frontend (frontend-petshop :3000, frontend-gomsu :3001, và sau này
-// là domain thật khi deploy) — dùng danh sách thay vì 1 origin cố định.
+// Restricts which origins may call the API, read from `FRONTEND_URLS` as a comma-separated
+// list. A list rather than a single origin is required because one backend serves several
+// frontends (frontend-petshop on :3000, frontend-gomsu on :3001, plus the real domains after
+// deploy). Requests with no Origin header — curl, Postman, server-to-server — are allowed
+// through, since the header is only sent by browsers and blocking them would break tooling.
 const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:3000,http://localhost:3001')
     .split(',')
     .map((url) => url.trim());
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Không có Origin (Postman/curl/gọi server-to-server) -> luôn cho phép
         if (!origin || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
@@ -36,7 +54,10 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// 3. Rate Limiting
+// Baseline throttle of 100 requests per 15 minutes per IP across the whole API, as a blunt
+// protection against scraping and runaway clients. Sensitive endpoints do not rely on this
+// number alone: `/auth/*` and `/contact` mount their own stricter limiters in their route
+// files, which run in addition to this one.
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // Limit each IP to 100 requests per 15 minutes
@@ -45,19 +66,29 @@ const apiLimiter = rateLimit({
     message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 
-// Apply rate limiter to all API routes
 app.use('/api/', apiLimiter);
 
+// Request logging plus body parsing. The 10MB body cap is far above the usual JSON payload
+// because blog content comes from a rich text editor that can inline images as base64 data
+// URIs; the Express default of 100KB rejected those saves with an opaque 500.
 app.use(logger('dev'));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
+// Liveness probe for the hosting platform. It answers before any authentication so an
+// uptime check never needs credentials.
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// Serves images uploaded before the move to Cloudinary. It has to stay above `notFound`,
+// otherwise the catch-all answers first and every one of these files 404s — which is exactly
+// what happened once and made all uploaded images disappear from the site.
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
+// The API itself, then the two closing handlers: `notFound` turns any unmatched URL into a
+// 404 ApiError, and `errorHandler` formats every error into the standard envelope. Both must
+// remain last and in this order — anything registered after `errorHandler` never runs.
 app.use('/api/v1', routes);
 app.use(notFound);
 app.use(errorHandler);

@@ -1,10 +1,11 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authFetch } from '../../../../lib/adminAuth';
-import { BRAND_CATEGORY_SLUG } from '../../../../lib/brand';
-import RichTextEditor from '../../../../components/admin/RichTextEditor';
-import { slugify } from '../../../../lib/slugify';
+import { authFetch } from '@/lib/adminAuth';
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import { slugify } from '@/lib/slugify';
 
 
 async function uploadImage(file) {
@@ -136,7 +137,7 @@ export default function NewPostPage() {
             {form.coverImageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${form.coverImageUrl}`}
+                src={getImageUrl(form.coverImageUrl)}
                 alt="preview"
                 className="w-32 h-32 object-cover border border-gray-200 rounded"
               />

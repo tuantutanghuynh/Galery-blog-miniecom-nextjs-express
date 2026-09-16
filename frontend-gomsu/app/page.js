@@ -1,12 +1,12 @@
-import { apiFetch } from '../lib/apiClient';
-import { BRAND_CATEGORY_SLUG } from '../lib/brand';
-import Hero from '../components/home/Hero';
-import ArtistIntro from '../components/home/ArtistIntro';
-import Quote from '../components/home/Quote';
-import FeaturedWorks from '../components/home/FeatureWorks';
-import LatestNews from '../components/home/LatestNews';
-import ContactSection from '../components/home/ContactSection';
-import Footer from '../components/home/Footer';
+import { apiFetch } from '@/lib/apiClient';
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
+import Hero from '@/components/home/Hero';
+import ArtistIntro from '@/components/home/ArtistIntro';
+import Quote from '@/components/home/Quote';
+import FeaturedWorks from '@/components/home/FeatureWorks';
+import LatestNews from '@/components/home/LatestNews';
+import ContactSection from '@/components/home/ContactSection';
+import Footer from '@/components/home/Footer';
 
 export const metadata = {
   title: 'Trang chủ',

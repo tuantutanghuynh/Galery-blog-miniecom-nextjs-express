@@ -1,49 +1,28 @@
-// ==========================================
-// 1. IMPORT DEPENDENCIES & CONFIGURATION
-// ==========================================
-// IMPORT the 'jsonwebtoken' library as 'jwt'
-// IMPORT 'jwtAccessSecret' from the local environment configuration file ('../config/env')
 const jwt = require('jsonwebtoken');
 const { jwtAccessSecret } = require('../config/env');
 
-// ==========================================
-// 2. DEFINE CONSTANTS
-// ==========================================
-// DEFINE CONSTANT ACCESS_TOKEN_TTL AND SET it to "15m" (15 minutes)
+// Signing and verification of access tokens. Access tokens are the short-lived half of the
+// auth pair; the long-lived refresh tokens live in token.service.js and are stored in the
+// database, while these are stateless and never persisted.
+
 const ACCESS_TOKEN_TTL = '15m';
 
-// ==========================================
-// 3. DEFINE TOKEN GENERATION FUNCTION
-// ==========================================
-// FUNCTION signAccessToken(payload):
-// Purpose: Creates a new signed access token containing the user's data (payload)
+// Signs a payload — `{ sub, role }` in this project — into an access token valid for 15
+// minutes. The TTL is deliberately short because a stateless JWT cannot be revoked once
+// issued: a stolen token stays usable until it expires, so the window is kept small and the
+// refresh-token rotation in token.service.js handles long-lived sessions instead. Keeping
+// the role inside the payload lets requireRole authorise a request without a database read.
 function signAccessToken(payload) {
-    // GENERATE a new token using jwt library's signing algorithm:
-    //   - Data to encode: payload
-    //   - Secret key: jwtAccessSecret
-    //   - Options: Set token expiration time to ACCESS_TOKEN_TTL (15 minutes)
-    // RETURN the generated token string
     return jwt.sign(payload, jwtAccessSecret, { expiresIn: ACCESS_TOKEN_TTL });
 }
-// END FUNCTION
 
-// ==========================================
-// 4. DEFINE TOKEN VERIFICATION FUNCTION
-// ==========================================
-// FUNCTION verifyAccessToken(token):
-// Purpose: Checks if the provided token is valid and has not expired
+// Verifies a token's signature and expiry and returns its decoded payload. It deliberately
+// does not catch anything: `jsonwebtoken` throws `TokenExpiredError` or `JsonWebTokenError`
+// on failure, and the caller — middlewares/authenticate.js — converts both into the same
+// 401 so the client cannot distinguish an expired token from a forged one. Callers must
+// therefore always wrap this in try/catch rather than checking a return value.
 function verifyAccessToken(token) {
-    // ATTEMPT to verify the token using jwt library's verification algorithm:
-    //   - Token to check: token
-    //   - Secret key: jwtAccessSecret
-    // Note: If the token is invalid, tampered with, or expired,
-    // the library will automatically throw a 'JsonWebTokenError' or 'TokenExpiredError'.
-    // RETURN the decoded payload if the verification is successful
-    return jwt.verify(token, jwtAccessSecret); // throws JsonWebTokenError/TokenExpiredError nếu invalid/expired
+    return jwt.verify(token, jwtAccessSecret);
 }
-// END FUNCTION
 
-// ==========================================
-// 5. EXPORT FUNCTIONS
-// ==========================================
 module.exports = { signAccessToken, verifyAccessToken };

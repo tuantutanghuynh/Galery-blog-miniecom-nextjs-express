@@ -1,44 +1,29 @@
-// ==========================================
-// 1. IMPORT DEPENDENCIES
-// ==========================================
-// IMPORT the built-in 'crypto' library (for cryptographic functions)
-// IMPORT the local 'prisma' client (for database operations)
 const crypto = require('crypto');
 const prisma = require('./prisma');
 
-// ==========================================
-// 2. DEFINE CONSTANTS
-// ==========================================
-// DEFINE CONSTANT REFRESH_TOKEN_TTL_MS AND SET it to 7 days in milliseconds (7 * 24 * 60 * 60 * 1000)
-const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; //7 NGÀY
+// Lifecycle of refresh tokens: issuing, rotating and revoking them. Unlike access tokens,
+// these are stored in the database so a session can actually be killed, and they implement
+// rotation with reuse detection — the mechanism that limits the damage of a stolen token.
 
-// ==========================================
-// 3. DEFINE UTILITY FUNCTION: HASH TOKEN
-// ==========================================
-// FUNCTION hashToken(rawToken):
-// Purpose: Creates a secure hash of the raw token before storing it in the database
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 ngày
+
+// Hashes a raw token with SHA-256 before it touches the database. Only the hash is stored,
+// so a leaked database dump cannot be replayed as valid sessions — the same reasoning as
+// hashing passwords. SHA-256 is enough here (unlike for passwords, where bcrypt is used)
+// because the token is 80 hex characters of cryptographic randomness, not a guessable
+// secret, so slow hashing buys nothing against brute force.
 function hashToken(rawToken) {
-    // CREATE a SHA-256 hash object
-    // UPDATE the hash object with the 'rawToken'
-    // RETURN the resulting hash as a hexadecimal string
     return crypto.createHash('sha256').update(rawToken).digest('hex');
 }
-// END FUNCTION
 
-// ==========================================
-// 4. DEFINE FUNCTION: ISSUE NEW REFRESH TOKEN
-// ==========================================
-// ASYNC FUNCTION issueRefreshToken(userId):
-// Purpose: Generates a new secure refresh token and saves its hash to the database
+// Creates a new refresh token for a user and stores only its hash with a 7-day expiry.
+// Returns the raw token, which is the one and only time it exists in plaintext — it goes to
+// the client and can never be recovered from the database afterwards. The value comes from
+// `crypto.randomBytes` rather than a JWT because this token carries no claims; it is just
+// an opaque lookup key, which keeps it short and makes revocation a simple row update.
 async function issueRefreshToken(userId) {
-    // GENERATE a cryptographically strong random string of 40 bytes
-    // CONVERT the random bytes to a hexadecimal string and STORE as 'rawToken'
     const rawToken = crypto.randomBytes(40).toString('hex');
-    // CALCULATE the expiration date (current time + REFRESH_TOKEN_TTL_MS)
-    // AWAIT database operation to CREATE a new 'refreshToken' record:
-    //   - Set 'userId' to the provided user ID
-    //   - Set 'tokenHash' to the result of hashToken(rawToken)
-    //   - Set 'expiresAt' to the calculated expiration date
+
     await prisma.refreshToken.create({
         data: {
             userId,
@@ -46,21 +31,20 @@ async function issueRefreshToken(userId) {
             expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
         }
     });
-    // Note: We return the plain text token to the user, but only store the hash
-    // RETURN rawToken
+
     return rawToken;
 }
-// END FUNCTION
 
-// ==========================================
-// 5. DEFINE FUNCTION: ROTATE REFRESH TOKEN
-// ==========================================
-// ASYNC FUNCTION rotateRefreshToken(rawToken):
-// Purpose: Replaces an old, valid refresh token with a new one (Token Rotation)
+// Exchanges a valid refresh token for a brand new one, returning `{ userId, rawToken }`, or
+// `null` for any token that must be rejected. The lookup deliberately ignores revocation
+// status at first, because finding an already-revoked token is the signal that matters: a
+// revoked token can only be replayed by someone who kept a copy, so every active session of
+// that user is revoked immediately and the caller is forced to log in again. A valid token
+// is revoked before a replacement is issued, so each refresh token is usable exactly once
+// and a stolen one stops working as soon as the real user refreshes.
 async function rotateRefreshToken(rawToken) {
     const tokenHash = hashToken(rawToken);
-    
-    // Find the token regardless of its revocation status
+
     const record = await prisma.refreshToken.findFirst({
         where: { tokenHash }
     });
@@ -69,57 +53,39 @@ async function rotateRefreshToken(rawToken) {
         return null;
     }
 
-    // Refresh Token Reuse Detection
     if (record.revokedAt !== null) {
-        // SECURITY ALERT: A revoked token is being used!
-        // This indicates a potential token theft (Replay Attack).
-        // Action: Revoke ALL active refresh tokens for this user immediately.
         await prisma.refreshToken.updateMany({
             where: { userId: record.userId, revokedAt: null },
             data: { revokedAt: new Date() }
         });
-        return null; // Deny access, forcing the user to re-login
+        return null;
     }
 
-    // Check expiration
     if (new Date() > record.expiresAt) {
         return null;
     }
 
-    // If valid, invalidate the old token
     await prisma.refreshToken.update({
         where: { id: record.id },
         data: { revokedAt: new Date() },
     });
-    
-    // Issue a completely new token for the user
+
     const newRawToken = await issueRefreshToken(record.userId);
     return { userId: record.userId, rawToken: newRawToken };
 }
-// END FUNCTION
 
-// ==========================================
-// 6. DEFINE FUNCTION: REVOKE REFRESH TOKEN
-// ==========================================
-// ASYNC FUNCTION revokeRefreshToken(rawToken):
-// Purpose: Manually invalidates a refresh token (e.g., for logging out)
+// Marks a single refresh token as revoked, which is what logging out does. It uses
+// `updateMany` filtered on `revokedAt: null` so calling it twice is harmless and an already
+// revoked token is left untouched — re-stamping the timestamp would erase when the session
+// actually ended. Note it stays silent when no row matches: a logout request carrying a
+// bogus token should not leak whether that token ever existed.
 async function revokeRefreshToken(rawToken) {
-    // HASH the provided 'rawToken' to get 'tokenHash'
     const tokenHash = hashToken(rawToken);
-    // AWAIT database operation to UPDATE ALL 'refreshToken' records where:
-    //   - The token hash matches 'tokenHash'
-    //   - The token has NOT been revoked yet ('revokedAt' is null)
-    // WITH the following change:
-    //   - Set 'revokedAt' to the current time
+
     await prisma.refreshToken.updateMany({
         where: { tokenHash, revokedAt: null },
-        data: { revokedAt: new Date()},
+        data: { revokedAt: new Date() },
     });
 }
-// END FUNCTION
 
-// ==========================================
-// 7. EXPORT FUNCTIONS
-// ==========================================
-// EXPORT issueRefreshToken, rotateRefreshToken, AND revokeRefreshToken for use in other files
-module.exports = { issueRefreshToken, rotateRefreshToken, revokeRefreshToken}
+module.exports = { issueRefreshToken, rotateRefreshToken, revokeRefreshToken }

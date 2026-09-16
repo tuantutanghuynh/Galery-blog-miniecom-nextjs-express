@@ -1,3 +1,4 @@
+import { getImageUrl } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function LatestNews({ posts }) {
@@ -20,7 +21,7 @@ export default function LatestNews({ posts }) {
               <div className="relative w-full aspect-[4/3] mb-6 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${post.coverImageUrl}`}
+                  src={getImageUrl(post.coverImageUrl)}
                   alt={post.title}
                   className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
                 />

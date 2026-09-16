@@ -1,44 +1,26 @@
-// ==========================================
-// 1. IMPORT DEPENDENCIES
-// ==========================================
-// IMPORT 'validationResult' from 'express-validator' (reads the validation
-// rules attached earlier in the route chain, e.g. body('email').isEmail())
-// IMPORT the custom 'ApiError' utility class (for standardized error handling)
 const { validationResult } = require('express-validator');
 const ApiError = require('../utils/ApiError');
 
-// ==========================================
-// 2. DEFINE VALIDATION MIDDLEWARE
-// ==========================================
-// FUNCTION validate(req, res, next):
-// Purpose: Runs AFTER the express-validator rule chain in a route definition
-// (e.g. [body('email').isEmail(), validate]) to collect and report any
-// validation failures in one consistent format.
+// Bridge between express-validator and this project's error envelope. Route files declare
+// their validation rules inline and end the array with this middleware, which is what stops
+// an invalid request before it ever reaches a controller.
+
+// Collects whatever the preceding express-validator rules recorded on the request and, if
+// anything failed, raises a 422 `VALIDATION_ERROR` carrying the full list of field errors
+// in `details` so the frontend can show which input was wrong. If nothing failed it simply
+// calls `next`. Rules alone do not reject anything — they only record results — so leaving
+// this middleware out means invalid data silently reaches the controller and usually
+// surfaces much later as a confusing Prisma error instead of a clean 422.
 function validate(req, res, next) {
-  // COLLECT all validation errors accumulated on 'req' by the rules declared
-  // earlier in the same route (express-validator attaches them internally,
-  // it does NOT throw — this is what actually reads them out)
   const errors = validationResult(req);
 
-  // IF there is at least one validation error:
-  //   CREATE a new ApiError (Status: 422, Code: 'VALIDATION_ERROR')
-  //   ATTACH the full list of individual field errors as 'details'
-  //   PASS the error to 'next' to trigger the centralized errorHandler
-  //   RETURN immediately to stop the request from reaching the controller
   if (!errors.isEmpty()) {
     return next(
       new ApiError(422, 'VALIDATION_ERROR', 'Dữ liệu không hợp lệ', errors.array())
     );
   }
 
-  // No errors found — let the request continue to the next middleware/controller
-  // CALL next()
   next();
 }
 
-// ==========================================
-// 3. EXPORT MODULE
-// ==========================================
-// EXPORT the 'validate' function so route files can plug it into their
-// validation chain right after the express-validator rules
 module.exports = validate;
