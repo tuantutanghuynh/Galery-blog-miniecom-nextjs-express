@@ -14,10 +14,20 @@ export const metadata = {
 };
 
 export default async function HomePage() {
-  const [{ data: galleryItems }, { data: posts }] = await Promise.all([
-    apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=8`, { cache: 'no-store' }),
-    apiFetch(`/blog?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=6`, { cache: 'no-store' }),
-  ]);
+  let galleryItems = [];
+  let posts = [];
+
+  try {
+    const [galleryRes, postsRes] = await Promise.all([
+      apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=8`, { cache: 'no-store' }),
+      apiFetch(`/blog?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=6`, { cache: 'no-store' }),
+    ]);
+    galleryItems = galleryRes.data || [];
+    posts = postsRes.data || [];
+  } catch (error) {
+    console.error('Lỗi khi tải dữ liệu trang chủ:', error.message);
+    // Vẫn render trang nhưng với danh sách rỗng nếu database chưa có dữ liệu
+  }
 
   return (
     <div>
