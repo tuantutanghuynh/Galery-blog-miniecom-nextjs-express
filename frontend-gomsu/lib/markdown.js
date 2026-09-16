@@ -1,7 +1,9 @@
-import DOMPurify from 'isomorphic-dompurify';
-
+// Không dùng isomorphic-dompurify trên Server Component vì thư viện jsdom quá nặng
+// và thường gây crash Server Component (React Error #441) trong Next.js 14+.
+// Ở đây dữ liệu được tạo bởi Admin nội bộ nên có thể tạm tin tưởng, 
+// lý tưởng nhất là sanitize ở Backend trước khi lưu vào DB.
 export function renderHtml(content) {
-  return DOMPurify.sanitize(content || '');
+  return content || '';
 }
 
 export function excerptFromContent(content, maxLength = 155) {

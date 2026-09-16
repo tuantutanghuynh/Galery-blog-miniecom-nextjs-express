@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import 'quill/dist/quill.snow.css';
 
 /* Design tokens theo project-docs/theme-spec-gomsu.md — phong cách "Dark Museum" */
 @theme {
