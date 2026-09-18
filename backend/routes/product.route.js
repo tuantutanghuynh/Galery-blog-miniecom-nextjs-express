@@ -63,6 +63,27 @@ router.patch(
   ctrl.updateVariant
 );
 
+// Images are managed one at a time rather than by replacing the whole set. Sending the full array
+// on every change would mean a dropped request could wipe every photo of a product; this way the
+// worst case is one image not being added.
+router.post(
+  '/:id/images',
+  authenticate,
+  requireRole('admin'),
+  [body('url').trim().notEmpty(), validate],
+  ctrl.addImage
+);
+
+router.patch(
+  '/images/:imageId',
+  authenticate,
+  requireRole('admin'),
+  [body('position').optional().isInt(), validate],
+  ctrl.updateImage
+);
+
+router.delete('/images/:imageId', authenticate, requireRole('admin'), ctrl.removeImage);
+
 router.delete('/:id', authenticate, requireRole('admin'), ctrl.remove);
 
 module.exports = router;

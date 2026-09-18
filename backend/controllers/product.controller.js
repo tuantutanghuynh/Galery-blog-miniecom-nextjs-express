@@ -264,6 +264,65 @@ const updateVariant = asyncHandler(async (req, res) => {
   sendSuccess(res, updated);
 });
 
+// Attaches an already-uploaded image to a product. The file itself goes to Cloudinary through
+// upload.controller.js first and arrives here as a URL, which keeps this endpoint free of any
+// file handling. New images land at the end of the order rather than the front, so adding a photo
+// never silently changes which one is the cover.
+const addImage = asyncHandler(async (req, res) => {
+  const { url, altText } = req.body;
+
+  const product = await prisma.product.findUnique({ where: { id: req.params.id } });
+  if (!product) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
+
+  const last = await prisma.productImage.findFirst({
+    where: { productId: product.id },
+    orderBy: { position: 'desc' },
+  });
+
+  const image = await prisma.productImage.create({
+    data: {
+      productId: product.id,
+      url,
+      altText: altText || product.name,
+      position: last ? last.position + 1 : 0,
+    },
+  });
+
+  sendSuccess(res, image, null, 201);
+});
+
+// Edits an image's alt text or moves it in the order. Alt text matters more than it looks: it is
+// what a screen reader announces and the main signal Google Images has about the photo, which is
+// why it defaults to the product name rather than being left empty.
+//
+// Reordering is expressed as a plain position number. To make an image the cover, the client sends
+// a position lower than every other image's — no reshuffling of the remaining rows is needed,
+// because the listing only ever sorts by this column and gaps in the sequence are harmless.
+const updateImage = asyncHandler(async (req, res) => {
+  const { altText, position } = req.body;
+
+  const existing = await prisma.productImage.findUnique({ where: { id: req.params.imageId } });
+  if (!existing) throw new ApiError(404, 'IMAGE_NOT_FOUND', 'Không tìm thấy ảnh');
+
+  const data = { altText, position };
+  Object.keys(data).forEach((key) => data[key] === undefined && delete data[key]);
+
+  const updated = await prisma.productImage.update({ where: { id: existing.id }, data });
+  sendSuccess(res, updated);
+});
+
+// Detaches an image from a product. Only the database row is removed — the file stays on
+// Cloudinary, because `ProductImage` stores just the URL and Cloudinary needs a `public_id` to
+// delete anything. Orphaned files therefore accumulate there over time. Fixing it properly means
+// storing `public_id` alongside the URL, which is a schema change and a separate job.
+const removeImage = asyncHandler(async (req, res) => {
+  const existing = await prisma.productImage.findUnique({ where: { id: req.params.imageId } });
+  if (!existing) throw new ApiError(404, 'IMAGE_NOT_FOUND', 'Không tìm thấy ảnh');
+
+  await prisma.productImage.delete({ where: { id: existing.id } });
+  sendSuccess(res, { message: 'Đã xoá ảnh' });
+});
+
 // Permanently deletes a product along with its variants and images. The row is read first purely so
 // a missing id answers with a clean 404 instead of the 500 Prisma raises when `delete` matches
 // nothing. Deleting is destructive in a way archiving is not: any cart holding one of these
@@ -286,4 +345,15 @@ const remove = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xoá sản phẩm' });
 });
 
-module.exports = { list, getBySlug, adminList, create, update, updateVariant, remove };
+module.exports = {
+  list,
+  getBySlug,
+  adminList,
+  create,
+  update,
+  updateVariant,
+  addImage,
+  updateImage,
+  removeImage,
+  remove,
+};

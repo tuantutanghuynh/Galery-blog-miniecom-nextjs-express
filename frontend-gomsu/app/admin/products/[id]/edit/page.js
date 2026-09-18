@@ -15,9 +15,11 @@ export default function EditProductPage({ params }) {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({ name: '', slug: '', description: '', status: 'draft', categoryId: '' });
   const [variants, setVariants] = useState([]);
+  const [images, setImages] = useState([]);
 
   const [savingInfo, setSavingInfo] = useState(false);
   const [savingVariant, setSavingVariant] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
@@ -49,6 +51,7 @@ export default function EditProductPage({ params }) {
         stockQuantity: String(v.stockQuantity),
         reservedQuantity: v.reservedQuantity,
       })));
+      setImages(found.images);
     });
   }, [id]);
 
@@ -93,6 +96,82 @@ export default function EditProductPage({ params }) {
       setErrorMsg(err.message);
     } finally {
       setSavingVariant(null);
+    }
+  }
+
+  async function handleUploadImages(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setErrorMsg(null);
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+        const up = await authFetch('/uploads/image', { method: 'POST', body: formData });
+        if (!up.data?.url) throw new Error(up.error?.message || 'Tải ảnh thất bại');
+
+        const saved = await authFetch(`/products/${id}/images`, {
+          method: 'POST',
+          body: JSON.stringify({ url: up.data.url, altText: form.name }),
+        });
+        if (saved.error) throw new Error(saved.error.message);
+        setImages((prev) => [...prev, saved.data]);
+      }
+      flash('Đã thêm ảnh.');
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  async function handleSaveAlt(image) {
+    try {
+      const json = await authFetch(`/products/images/${image.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ altText: image.altText }),
+      });
+      if (json.error) throw new Error(json.error.message);
+      flash('Đã lưu mô tả ảnh.');
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  }
+
+  // Ảnh đứng đầu là ảnh bìa hiện trên trang danh sách và khi chia sẻ link. Thay vì sắp xếp lại
+  // toàn bộ, chỉ cần đẩy ảnh này xuống một số nhỏ hơn mọi ảnh còn lại — thứ tự chỉ do cột
+  // position quyết định, nên khoảng trống trong dãy số không gây vấn đề gì.
+  async function handleSetPrimary(image) {
+    const minPosition = Math.min(...images.map((i) => i.position));
+    if (image.position === minPosition) return;
+
+    try {
+      const json = await authFetch(`/products/images/${image.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ position: minPosition - 1 }),
+      });
+      if (json.error) throw new Error(json.error.message);
+      setImages((prev) =>
+        [...prev.map((i) => (i.id === image.id ? json.data : i))].sort((a, b) => a.position - b.position)
+      );
+      flash('Đã đặt làm ảnh bìa.');
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  }
+
+  async function handleDeleteImage(image) {
+    if (!confirm('Xoá ảnh này khỏi sản phẩm?')) return;
+    try {
+      const json = await authFetch(`/products/images/${image.id}`, { method: 'DELETE' });
+      if (json.error) throw new Error(json.error.message);
+      setImages((prev) => prev.filter((i) => i.id !== image.id));
+      flash('Đã xoá ảnh.');
+    } catch (err) {
+      setErrorMsg(err.message);
     }
   }
 
@@ -217,20 +296,63 @@ export default function EditProductPage({ params }) {
         ))}
       </section>
 
-      {product.images.length > 0 && (
-        <section className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <h2 className="font-serif text-xl text-gray-900 mb-4">Hình ảnh</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {product.images.map((img) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={img.id} src={getImageUrl(img.url)} alt={img.altText || ''} className="w-full h-32 object-cover border border-gray-200 rounded" />
-            ))}
+      <section className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 flex flex-col gap-5">
+        <h2 className="font-serif text-xl text-gray-900">Hình ảnh</h2>
+
+        <div>
+          <input type="file" accept="image/*" multiple onChange={handleUploadImages} disabled={uploading} className="text-sm" />
+          {uploading && <p className="text-xs text-gray-500 mt-2">Đang tải ảnh lên...</p>}
+        </div>
+
+        {images.length === 0 ? (
+          <p className="text-sm text-gray-500">Sản phẩm chưa có ảnh nào.</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {images.map((img, i) => {
+              const isPrimary = i === 0;
+              return (
+                <div key={img.id} className={`border rounded overflow-hidden bg-gray-50 ${isPrimary ? 'border-black' : 'border-gray-200'}`}>
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={getImageUrl(img.url)} alt={img.altText || ''} className="w-full h-36 object-cover" />
+                    {isPrimary && (
+                      <span className="absolute top-2 left-2 bg-black text-white text-[10px] uppercase tracking-widest px-2 py-1">
+                        Ảnh bìa
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3 flex flex-col gap-2">
+                    <input
+                      value={img.altText || ''}
+                      onChange={(e) => setImages((prev) => prev.map((x) => (x.id === img.id ? { ...x, altText: e.target.value } : x)))}
+                      onBlur={() => handleSaveAlt(img)}
+                      placeholder="Mô tả ảnh"
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-black"
+                    />
+                    <div className="flex items-center justify-between">
+                      {!isPrimary ? (
+                        <button type="button" onClick={() => handleSetPrimary(img)} className="text-xs text-blue-600 hover:text-blue-800">
+                          Đặt làm ảnh bìa
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400">Đang là ảnh bìa</span>
+                      )}
+                      <button type="button" onClick={() => handleDeleteImage(img)} className="text-xs text-red-600 hover:text-red-800">
+                        Xoá
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <p className="text-xs text-gray-500 mt-4">
-            Sửa ảnh chưa làm được ở bản này — cần xoá sản phẩm và tạo lại nếu muốn đổi ảnh.
-          </p>
-        </section>
-      )}
+        )}
+
+        <p className="text-xs text-gray-500">
+          Mô tả ảnh được lưu khi bạn click ra ngoài ô nhập. Đây là nội dung trình đọc màn hình
+          đọc lên và là thông tin chính Google có về bức ảnh.
+        </p>
+      </section>
     </div>
   );
 }
