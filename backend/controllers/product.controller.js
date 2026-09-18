@@ -233,6 +233,37 @@ const update = asyncHandler(async (req, res) => {
   sendSuccess(res, product);
 });
 
+// Updates one variant's price and stock. This lives apart from `update` on purpose: those fields
+// are the two most dangerous in the catalogue, and keeping them out of the general-purpose product
+// endpoint means a partial form submission can never blank out inventory as a side effect.
+//
+// `stockQuantity` is set to an absolute number rather than adjusted by a delta, because that is
+// what a stock-take gives you — the admin counts twelve vases on the shelf and types twelve. The
+// value is rejected if it would fall below what is already reserved for pending orders, since that
+// would promise customers goods that are spoken for. `reservedQuantity` itself is never editable by
+// hand; it is owned by checkout and the sweeper.
+const updateVariant = asyncHandler(async (req, res) => {
+  const { price, compareAtPrice, stockQuantity, label } = req.body;
+
+  const variant = await prisma.productVariant.findUnique({ where: { id: req.params.variantId } });
+  if (!variant) throw new ApiError(404, 'VARIANT_NOT_FOUND', 'Không tìm thấy biến thể');
+
+  if (stockQuantity !== undefined && stockQuantity < variant.reservedQuantity) {
+    throw new ApiError(
+      409,
+      'STOCK_BELOW_RESERVED',
+      `Không thể đặt tồn kho thấp hơn ${variant.reservedQuantity} đang giữ cho đơn chờ thanh toán`
+    );
+  }
+
+  const data = { price, compareAtPrice, stockQuantity };
+  if (label !== undefined) data.variantAttributes = { ...variant.variantAttributes, label };
+  Object.keys(data).forEach((key) => data[key] === undefined && delete data[key]);
+
+  const updated = await prisma.productVariant.update({ where: { id: variant.id }, data });
+  sendSuccess(res, updated);
+});
+
 // Permanently deletes a product along with its variants and images. The row is read first purely so
 // a missing id answers with a clean 404 instead of the 500 Prisma raises when `delete` matches
 // nothing. Deleting is destructive in a way archiving is not: any cart holding one of these
@@ -255,4 +286,4 @@ const remove = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xoá sản phẩm' });
 });
 
-module.exports = { list, getBySlug, adminList, create, update, remove };
+module.exports = { list, getBySlug, adminList, create, update, updateVariant, remove };

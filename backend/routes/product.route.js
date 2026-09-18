@@ -48,6 +48,21 @@ router.patch(
   ctrl.update
 );
 
+// Price and stock are edited through their own endpoint rather than through PATCH /:id, so that a
+// partial product form can never wipe inventory as a side effect of saving a description.
+router.patch(
+  '/variants/:variantId',
+  authenticate,
+  requireRole('admin'),
+  [
+    body('price').optional().isInt({ min: 0 }),
+    body('compareAtPrice').optional({ nullable: true }).isInt({ min: 0 }),
+    body('stockQuantity').optional().isInt({ min: 0 }),
+    validate,
+  ],
+  ctrl.updateVariant
+);
+
 router.delete('/:id', authenticate, requireRole('admin'), ctrl.remove);
 
 module.exports = router;

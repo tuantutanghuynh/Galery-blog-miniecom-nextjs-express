@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getToken, getRefreshToken, clearTokens } from '@/lib/adminAuth';
 
 const NAV_ITEMS = [
+  { name: 'Sản phẩm', path: '/admin/products' },
   { name: 'Bài viết', path: '/admin/posts' },
   { name: 'Gallery', path: '/admin/gallery' },
   { name: 'Danh mục', path: '/admin/categories' },
