@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { authFetch } from '@/lib/adminAuth';
 import { getImageUrl } from '@/lib/utils';
 import { slugify } from '@/lib/slugify';
@@ -28,13 +29,21 @@ export default function NewProductPage() {
 
   // Chỉ lấy danh mục thuộc thương hiệu này (gốc + các con trực tiếp), nếu không admin gốm sứ
   // có thể vô tình xếp bình gốm vào danh mục của petshop.
+  //
+  // Khi chỉ có đúng một lựa chọn thì chọn sẵn luôn: bắt người dùng tự tay chọn một thứ hiển
+  // nhiên là cách nhanh nhất để họ bấm Lưu rồi nhận lỗi "vui lòng chọn danh mục" mà không
+  // hiểu tại sao.
   useEffect(() => {
     authFetch('/categories').then((res) => {
       const all = res.data || [];
       const brand = all.find((c) => c.slug === BRAND_CATEGORY_SLUG);
-      setCategories(brand ? all.filter((c) => c.id === brand.id || c.parentId === brand.id) : all);
+      const mine = brand ? all.filter((c) => c.id === brand.id || c.parentId === brand.id) : all;
+      setCategories(mine);
+      if (mine.length === 1) setCategoryId(mine[0].id);
     });
   }, []);
+
+  const hasSubCategories = categories.some((c) => c.slug !== BRAND_CATEGORY_SLUG);
 
   // Slug tự sinh theo tên cho tới khi người dùng tự sửa nó. Sau đó thì để yên, vì slug đã
   // gõ tay thường là có chủ đích (giữ đường dẫn cũ, rút gọn cho dễ đọc).
@@ -152,9 +161,20 @@ export default function NewProductPage() {
               <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required className={inputCls + ' bg-white'}>
                 <option value="">— Chọn danh mục —</option>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.slug === BRAND_CATEGORY_SLUG ? `${c.name} (danh mục gốc)` : c.name}
+                  </option>
                 ))}
               </select>
+              {!hasSubCategories && (
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Chưa có danh mục con nào, nên tạm xếp vào danh mục gốc.{' '}
+                  <Link href="/admin/categories" className="text-blue-600 hover:underline">
+                    Tạo danh mục
+                  </Link>{' '}
+                  như Bình gốm, Tượng, Lọ hoa để phân loại sản phẩm rõ hơn.
+                </p>
+              )}
             </div>
             <div>
               <label className={labelCls}>Trạng thái</label>
