@@ -23,7 +23,8 @@ const PAYMENT_STATUS = Object.freeze({
   PENDING: 'PENDING', // waiting for the customer to pay
   PAID: 'PAID',
   UNPAID: 'UNPAID', // COD — money is collected on delivery
-  FAILED: 'FAILED',
+  FAILED: 'FAILED', // a payment was attempted and rejected
+  EXPIRED: 'EXPIRED', // nobody ever paid and the hold ran out
 });
 
 // Which order statuses may follow which. A transition not listed here is rejected rather than
@@ -44,6 +45,11 @@ const ORDER_TRANSITIONS = Object.freeze({
 // changed their mind.
 const PAYMENT_WINDOW_HOURS = 24;
 
+// How often the cleanup job looks for expired orders. It does not need to be precise — an order
+// held fifteen minutes past its deadline harms nobody — and running it rarely keeps the query off
+// the database most of the time.
+const SWEEP_INTERVAL_MINUTES = 15;
+
 // Shipping is not calculated yet — no carrier integration exists. This is deliberately a named
 // constant rather than a literal 0 inside the total, so the day a real rate table arrives there is
 // exactly one place to change, and so a reader can tell this is "not built yet" rather than
@@ -56,5 +62,6 @@ module.exports = {
   PAYMENT_STATUS,
   ORDER_TRANSITIONS,
   PAYMENT_WINDOW_HOURS,
+  SWEEP_INTERVAL_MINUTES,
   SHIPPING_FEE_NOT_CALCULATED,
 };
