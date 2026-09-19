@@ -16,7 +16,7 @@ export default function EditProductPage({ params }) {
   const [form, setForm] = useState({ name: '', slug: '', description: '', status: 'draft', categoryId: '' });
   const [variants, setVariants] = useState([]);
   const [images, setImages] = useState([]);
-  const [newVariant, setNewVariant] = useState({ sku: '', label: '', price: 0, stockQuantity: 0 });
+  const [newVariant, setNewVariant] = useState({ sku: '', label: '', price: 0, compareAtPrice: '', stockQuantity: 0 });
   const [addingVariant, setAddingVariant] = useState(false);
 
   const [savingInfo, setSavingInfo] = useState(false);
@@ -195,14 +195,18 @@ export default function EditProductPage({ params }) {
     setErrorMsg(null);
     setAddingVariant(true);
     try {
+      const payload = {
+        sku: newVariant.sku.trim(),
+        label: newVariant.label.trim(),
+        price: Number(newVariant.price) || 0,
+        stockQuantity: Number(newVariant.stockQuantity) || 0,
+      };
+      if (newVariant.compareAtPrice) {
+        payload.compareAtPrice = Number(newVariant.compareAtPrice);
+      }
       const json = await authFetch(`/products/${id}/variants`, {
         method: 'POST',
-        body: JSON.stringify({
-          sku: newVariant.sku.trim(),
-          label: newVariant.label.trim(),
-          price: Number(newVariant.price) || 0,
-          stockQuantity: Number(newVariant.stockQuantity) || 0,
-        }),
+        body: JSON.stringify(payload),
       });
       if (json.error) throw new Error(json.error.message);
       setVariants((prev) => [
@@ -212,11 +216,12 @@ export default function EditProductPage({ params }) {
           sku: json.data.sku,
           label: json.data.variantAttributes?.label || '',
           price: String(json.data.price),
+          compareAtPrice: json.data.compareAtPrice,
           stockQuantity: String(json.data.stockQuantity),
           reservedQuantity: 0,
         },
       ]);
-      setNewVariant({ sku: '', label: '', price: 0, stockQuantity: 0 });
+      setNewVariant({ sku: '', label: '', price: 0, compareAtPrice: '', stockQuantity: 0 });
       flash(`Đã thêm biến thể ${newVariant.sku}.`);
     } catch (err) {
       setErrorMsg(err.message);
@@ -357,17 +362,21 @@ export default function EditProductPage({ params }) {
         <div className="mt-4 pt-4 border-t border-gray-100">
           <h3 className="text-sm font-medium text-gray-700 mb-3">Thêm biến thể mới</h3>
           <form onSubmit={handleAddVariant} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-blue-50/30 p-4 border border-blue-100 rounded">
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <label className={labelCls}>Tên phiên bản</label>
               <input required value={newVariant.label} onChange={e => setNewVariant({...newVariant, label: e.target.value})} className={inputCls} placeholder="VD: Đen - Size M" />
             </div>
             <div className="md:col-span-2">
-              <label className={labelCls}>SKU mới</label>
+              <label className={labelCls}>SKU</label>
               <input required value={newVariant.sku} onChange={e => setNewVariant({...newVariant, sku: e.target.value})} className={inputCls + ' font-mono text-xs'} placeholder="Mã duy nhất" />
             </div>
-            <div className="md:col-span-3">
-              <label className={labelCls}>Giá (VNĐ)</label>
+            <div className="md:col-span-2">
+              <label className={labelCls}>Giá bán</label>
               <input required type="number" min="0" step="1000" value={newVariant.price} onChange={e => setNewVariant({...newVariant, price: parseInt(e.target.value) || 0})} className={inputCls} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelCls}>Giá gốc (khuyến mãi)</label>
+              <input type="number" min="0" step="1000" value={newVariant.compareAtPrice} onChange={e => setNewVariant({...newVariant, compareAtPrice: e.target.value ? parseInt(e.target.value) : ''})} className={inputCls} placeholder="Tuỳ chọn" />
             </div>
             <div className="md:col-span-2">
               <label className={labelCls}>Tồn kho</label>
