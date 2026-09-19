@@ -24,12 +24,12 @@ export default function VisualEditorOverlay({ settingKey }) {
       const formData = new FormData();
       formData.append('image', file);
       
-      const uploadRes = await authFetch('/uploads', {
+      const uploadRes = await authFetch('/uploads/image', {
         method: 'POST',
         body: formData,
       });
 
-      if (uploadRes.success) {
+      if (!uploadRes.error && uploadRes.data?.url) {
         const patchRes = await authFetch('/settings', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -37,9 +37,10 @@ export default function VisualEditorOverlay({ settingKey }) {
             settings: { [settingKey]: uploadRes.data.url }
           })
         });
-        if (patchRes.error || patchRes.success === false) throw new Error(patchRes.error?.message || "Lưu cài đặt thất bại");
-
-        window.location.reload();
+        if (patchRes.error) throw new Error(patchRes.error.message);
+        router.refresh();
+      } else {
+        throw new Error(uploadRes.error?.message || 'Tải ảnh thất bại');
       }
     } catch (err) {
       alert('Lỗi cập nhật ảnh: ' + err.message);
