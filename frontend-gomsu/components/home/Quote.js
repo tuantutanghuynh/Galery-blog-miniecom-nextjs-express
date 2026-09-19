@@ -1,20 +1,15 @@
-import VisualEditorImage from '@/components/ui/VisualEditorImage';
+import VisualEditorOverlay from '@/components/ui/VisualEditorOverlay';
 
 export default function Quote({ imageUrl }) {
   return (
-    <section className="relative px-6 py-32 md:py-40 border-b border-gomsu-border text-center overflow-hidden">
-      {/* Background Image managed via Visual Editor */}
-      <VisualEditorImage
-        settingKey="homepage_quote"
-        src={imageUrl}
-        alt="Quote pattern background"
-        fill
-        className="absolute inset-0 w-full h-full"
-        imageClassName="object-cover object-center opacity-30 grayscale" // Tweak opacity/filter to match original background style
-      />
-      
+    <section 
+      className="relative group px-6 py-32 md:py-40 border-b border-gomsu-border text-center bg-fixed bg-center bg-cover overflow-hidden"
+      style={{ backgroundImage: `url('${imageUrl}')` }}
+    >
+      <VisualEditorOverlay settingKey="homepage_quote" />
+
       {/* Lớp phủ làm mờ pattern để texture chìm hẳn xuống nền đen */}
-      <div className="absolute inset-0 bg-[#111111]/70 z-[5] pointer-events-none"></div>
+      <div className="absolute inset-0 bg-[#111111]/70 pointer-events-none"></div>
 
       <div className="relative z-10 max-w-3xl mx-auto flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-12 text-left pointer-events-none">
         <div className="text-[120px] md:text-[180px] font-serif text-gomsu-text-muted/40 leading-none pt-8 hidden md:block">

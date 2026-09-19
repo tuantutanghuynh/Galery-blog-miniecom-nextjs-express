@@ -33,7 +33,6 @@ export default function VisualEditorImage({
 
     try {
       setIsUploading(true);
-
       const formData = new FormData();
       formData.append('image', file);
       
@@ -50,7 +49,6 @@ export default function VisualEditorImage({
             settings: { [settingKey]: uploadRes.data.url }
           })
         });
-
         router.refresh();
       }
     } catch (err) {
@@ -60,8 +58,13 @@ export default function VisualEditorImage({
     }
   };
 
+  // Nếu className truyền vào có absolute, fixed, block... thì không tự ép relative
+  const wrapperClass = className.includes('absolute') || className.includes('fixed') 
+    ? `group ${className}` 
+    : `relative group ${className}`;
+
   return (
-    <div className={`relative group ${className}`}>
+    <div className={wrapperClass}>
       <Image 
         src={src} 
         alt={alt} 
