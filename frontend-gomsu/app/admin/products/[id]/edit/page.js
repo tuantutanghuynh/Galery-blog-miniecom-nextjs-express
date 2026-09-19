@@ -16,6 +16,8 @@ export default function EditProductPage({ params }) {
   const [form, setForm] = useState({ name: '', slug: '', description: '', status: 'draft', categoryId: '' });
   const [variants, setVariants] = useState([]);
   const [images, setImages] = useState([]);
+  const [newVariant, setNewVariant] = useState({ sku: '', label: '', price: 0, stockQuantity: 0 });
+  const [addingVariant, setAddingVariant] = useState(false);
 
   const [savingInfo, setSavingInfo] = useState(false);
   const [savingVariant, setSavingVariant] = useState(null);
@@ -244,11 +246,12 @@ export default function EditProductPage({ params }) {
         </div>
       </form>
 
+      
       <section className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 flex flex-col gap-4 mb-8">
         <h2 className="font-serif text-xl text-gray-900">Giá &amp; tồn kho</h2>
 
         {variants.map((v, i) => (
-          <div key={v.id} className="border border-gray-200 rounded p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-gray-50/50">
+          <div key={v.id} className="border border-gray-200 rounded p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-gray-50/50 relative group">
             <div className="md:col-span-3">
               <label className={labelCls}>Tên phiên bản</label>
               <input
@@ -277,7 +280,15 @@ export default function EditProductPage({ params }) {
                 className={inputCls}
               />
             </div>
-            <div className="md:col-span-2 flex justify-end">
+            <div className="md:col-span-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => handleDeleteVariant(v)}
+                className="border border-transparent text-red-600 px-3 py-2.5 text-xs font-medium hover:bg-red-50 transition-colors rounded"
+                title="Xóa biến thể này"
+              >
+                Xóa
+              </button>
               <button
                 type="button"
                 onClick={() => handleSaveVariant(v)}
@@ -294,7 +305,35 @@ export default function EditProductPage({ params }) {
             )}
           </div>
         ))}
+
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Thêm biến thể mới</h3>
+          <form onSubmit={handleAddVariant} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-blue-50/30 p-4 border border-blue-100 rounded">
+            <div className="md:col-span-3">
+              <label className={labelCls}>Tên phiên bản</label>
+              <input required value={newVariant.label} onChange={e => setNewVariant({...newVariant, label: e.target.value})} className={inputCls} placeholder="VD: Đen - Size M" />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelCls}>SKU mới</label>
+              <input required value={newVariant.sku} onChange={e => setNewVariant({...newVariant, sku: e.target.value})} className={inputCls + ' font-mono text-xs'} placeholder="Mã duy nhất" />
+            </div>
+            <div className="md:col-span-3">
+              <label className={labelCls}>Giá (VNĐ)</label>
+              <input required type="number" min="0" step="1000" value={newVariant.price} onChange={e => setNewVariant({...newVariant, price: parseInt(e.target.value) || 0})} className={inputCls} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelCls}>Tồn kho</label>
+              <input required type="number" min="0" value={newVariant.stockQuantity} onChange={e => setNewVariant({...newVariant, stockQuantity: parseInt(e.target.value) || 0})} className={inputCls} />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <button type="submit" disabled={addingVariant} className="bg-blue-600 text-white px-4 py-2.5 text-xs uppercase tracking-wider font-medium hover:bg-blue-700 transition-colors rounded disabled:opacity-50">
+                {addingVariant ? '...' : '+ Thêm'}
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
+
 
       <section className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 flex flex-col gap-5">
         <h2 className="font-serif text-xl text-gray-900">Hình ảnh</h2>

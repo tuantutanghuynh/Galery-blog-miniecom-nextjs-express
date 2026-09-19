@@ -40,6 +40,23 @@ router.post(
   ctrl.create
 );
 
+
+router.post(
+  '/:id/variants',
+  authenticate,
+  requireRole('admin'),
+  [
+    body('sku').notEmpty().withMessage('SKU không được để trống'),
+    body('price').isInt({ min: 0 }).withMessage('Giá không hợp lệ'),
+    body('compareAtPrice').optional({ nullable: true }).isInt({ min: 0 }),
+    body('stockQuantity').optional().isInt({ min: 0 }),
+    validate,
+  ],
+  ctrl.addVariant
+);
+
+router.delete('/variants/:variantId', authenticate, requireRole('admin'), ctrl.removeVariant);
+
 router.patch(
   '/:id',
   authenticate,
