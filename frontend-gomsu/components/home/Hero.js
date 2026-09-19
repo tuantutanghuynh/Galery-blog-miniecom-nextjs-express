@@ -1,23 +1,22 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import VisualEditorImage from '@/components/ui/VisualEditorImage';
 
-export default function Hero() {
+export default function Hero({ imageUrl }) {
   return (
     <section className="relative w-full h-[80vh] min-h-[600px] flex items-center border-b border-gomsu-border overflow-hidden">
-      {/* Background Image */}
-      <Image
-        src="/images/hero-khong-gian-nghe-thuat.png"
+      <VisualEditorImage
+        settingKey="homepage_hero"
+        src={imageUrl}
         alt="Không gian trưng bày nghệ thuật gốm sứ đương đại Nghĩa Phái"
         fill
         priority
-        className="object-cover object-center scale-[1.02]"
+        className="absolute inset-0 w-full h-full"
+        imageClassName="object-cover object-center scale-[1.02]"
       />
       
-      {/* Lớp mờ thật nhẹ (20%) để ảnh hơi tối lại một chút xíu */}
-      <div className="absolute inset-0 bg-black/30 pointer-events-none"></div>
+      <div className="absolute inset-0 bg-black/30 pointer-events-none z-[5]"></div>
 
-      {/* Nội dung Text */}
-      <div className="relative z-10 px-6 w-full max-w-7xl mx-auto">
+      <div className="relative z-10 px-6 w-full max-w-7xl mx-auto pointer-events-none">
         <h3 className="font-sans font-bold text-xs uppercase tracking-[0.2em] text-gomsu-primary brightness-125 drop-shadow-md mb-6">
           Bát Tràng Art Atelier
         </h3>
@@ -30,7 +29,7 @@ export default function Hero() {
           Nghĩa Phái kết nối tinh hoa gốm sứ Bát Tràng với ngôn ngữ nghệ thuật đương đại, tạo
           nên những giá trị vượt thời gian.
         </p>
-        <div>
+        <div className="pointer-events-auto inline-block">
           <Link
             href="/gallery"
             className="inline-flex items-center gap-2 mt-8 px-6 py-3 border border-gomsu-primary/50 text-gomsu-primary hover:bg-gomsu-primary hover:text-black transition-colors uppercase text-xs tracking-widest bg-black/30 backdrop-blur-sm"

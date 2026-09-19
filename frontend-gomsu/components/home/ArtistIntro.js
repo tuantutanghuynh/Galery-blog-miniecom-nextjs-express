@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import VisualEditorImage from '@/components/ui/VisualEditorImage';
 
 const STATS = [
   ['10+', 'Năm sáng tác'],
@@ -6,24 +6,26 @@ const STATS = [
   ['10+', 'Giải thưởng'],
 ];
 
-export default function ArtistIntro() {
+export default function ArtistIntro({ imageUrl }) {
   return (
     <section className="px-6 py-20 border-b border-gomsu-border">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
         {/* Left: Artist Portrait */}
         <div className="relative w-full aspect-[4/5] md:aspect-[3/4]">
-          <Image
-            src="/images/artist-portrait.jpg"
+          <VisualEditorImage
+            settingKey="homepage_artist"
+            src={imageUrl}
             alt="Chân dung nghệ sĩ Gốm Bát Tràng"
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover grayscale hover:grayscale-0 transition-all duration-700"
+            className="absolute inset-0 w-full h-full"
+            imageClassName="object-cover grayscale hover:grayscale-0 transition-all duration-700"
           />
           {/* Lớp phủ mờ 4 cạnh (Dày hơn để hòa quyện sâu hơn) */}
-          <div className="absolute inset-x-0 top-0 h-32 md:h-56 bg-gradient-to-b from-[#111111] via-[#111111]/70 to-transparent pointer-events-none"></div>
-          <div className="absolute inset-x-0 bottom-0 h-32 md:h-56 bg-gradient-to-t from-[#111111] via-[#111111]/70 to-transparent pointer-events-none"></div>
-          <div className="absolute inset-y-0 left-0 w-32 md:w-56 bg-gradient-to-r from-[#111111] via-[#111111]/70 to-transparent pointer-events-none"></div>
-          <div className="absolute inset-y-0 right-0 w-32 md:w-56 bg-gradient-to-l from-[#111111] via-[#111111]/70 to-transparent pointer-events-none"></div>
+          <div className="absolute inset-x-0 top-0 h-32 md:h-56 bg-gradient-to-b from-[#111111] via-[#111111]/70 to-transparent pointer-events-none z-[5]"></div>
+          <div className="absolute inset-x-0 bottom-0 h-32 md:h-56 bg-gradient-to-t from-[#111111] via-[#111111]/70 to-transparent pointer-events-none z-[5]"></div>
+          <div className="absolute inset-y-0 left-0 w-32 md:w-56 bg-gradient-to-r from-[#111111] via-[#111111]/70 to-transparent pointer-events-none z-[5]"></div>
+          <div className="absolute inset-y-0 right-0 w-32 md:w-56 bg-gradient-to-l from-[#111111] via-[#111111]/70 to-transparent pointer-events-none z-[5]"></div>
         </div>
 
         {/* Right: Info & Stats */}
@@ -48,13 +50,6 @@ export default function ArtistIntro() {
               </div>
             ))}
           </div>
-          
-          {/* Chỗ để chữ ký tay sau này (chỉ cần uncomment khi có ảnh chữ ký) */}
-          {/* 
-          <div className="mt-12">
-            <Image src="/images/signature.png" alt="Signature" width={150} height={60} className="opacity-80" />
-          </div> 
-          */}
         </div>
       </div>
     </section>
