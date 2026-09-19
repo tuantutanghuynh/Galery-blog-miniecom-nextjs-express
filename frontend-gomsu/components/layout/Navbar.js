@@ -8,6 +8,7 @@ const navLinks = [
   { name: 'Trang chủ', path: '/' },
   // { name: 'Nghệ thuật', path: '/art' },
   // { name: 'Xưởng sản xuất', path: '/workshop' },
+  { name: 'Sản phẩm', path: '/san-pham' },
   { name: 'Bộ sưu tập', path: '/gallery' },
   // { name: 'Dự án', path: '/projects' },
   { name: 'Tin tức', path: '/blog' },

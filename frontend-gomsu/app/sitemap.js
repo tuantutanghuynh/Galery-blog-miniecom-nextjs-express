@@ -8,6 +8,7 @@ export default async function sitemap() {
   const staticRoutes = [
     '',
     '/about',
+    '/san-pham',
     '/gallery',
     '/blog',
     '/contact',
@@ -34,5 +35,22 @@ export default async function sitemap() {
     console.error('Lỗi tạo sitemap cho blog', error);
   }
 
-  return [...staticRoutes, ...blogRoutes];
+  // Chỉ sản phẩm `active` được liệt kê, vì endpoint công khai không trả về hàng nháp hay đã
+  // ngừng bán. Đưa một URL trả 404 vào sitemap là cách nhanh nhất để mất tín nhiệm với Google.
+  let productRoutes = [];
+  try {
+    const res = await apiFetch(`/products?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=1000`);
+    if (res.data) {
+      productRoutes = res.data.map((product) => ({
+        url: `${baseUrl}/san-pham/${product.slug}`,
+        lastModified: new Date(product.updatedAt || product.createdAt || new Date()),
+        changeFrequency: 'weekly',
+        priority: 0.9, // cao hơn bài viết: đây là trang sinh ra doanh thu
+      }));
+    }
+  } catch (error) {
+    console.error('Lỗi tạo sitemap cho sản phẩm', error);
+  }
+
+  return [...staticRoutes, ...productRoutes, ...blogRoutes];
 }
