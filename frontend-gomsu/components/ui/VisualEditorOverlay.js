@@ -30,13 +30,15 @@ export default function VisualEditorOverlay({ settingKey }) {
       });
 
       if (uploadRes.success) {
-        await authFetch('/settings', {
+        const patchRes = await authFetch('/settings', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             settings: { [settingKey]: uploadRes.data.url }
           })
         });
+        if (patchRes.error || patchRes.success === false) throw new Error(patchRes.error?.message || "Lưu cài đặt thất bại");
+
         window.location.reload();
       }
     } catch (err) {
