@@ -6,7 +6,7 @@ const ApiError = require('../utils/ApiError');
 // the buffer to Cloudinary.
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB — generous for hero and product photos
 
 // Keeps the uploaded file in memory as `req.file.buffer` instead of writing it to disk.
 // Nothing needs the file on disk because it is forwarded straight to Cloudinary, and the
