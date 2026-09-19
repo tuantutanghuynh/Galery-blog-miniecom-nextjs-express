@@ -37,7 +37,7 @@ export default function VisualEditorOverlay({ settingKey }) {
             settings: { [settingKey]: uploadRes.data.url }
           })
         });
-        router.refresh();
+        window.location.reload();
       }
     } catch (err) {
       alert('Lỗi cập nhật ảnh: ' + err.message);
