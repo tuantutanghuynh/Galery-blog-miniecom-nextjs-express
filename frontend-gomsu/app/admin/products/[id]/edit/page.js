@@ -177,6 +177,54 @@ export default function EditProductPage({ params }) {
     }
   }
 
+  async function handleDeleteVariant(v) {
+    if (!confirm(`Xoá biến thể ${v.sku}? Hành động này không thể hoàn tác.`)) return;
+    try {
+      setErrorMsg(null);
+      const json = await authFetch(`/products/variants/${v.id}`, { method: 'DELETE' });
+      if (json.error) throw new Error(json.error.message);
+      setVariants((prev) => prev.filter((x) => x.id !== v.id));
+      flash(`Đã xoá biến thể ${v.sku}.`);
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  }
+
+  async function handleAddVariant(e) {
+    e.preventDefault();
+    setErrorMsg(null);
+    setAddingVariant(true);
+    try {
+      const json = await authFetch(`/products/${id}/variants`, {
+        method: 'POST',
+        body: JSON.stringify({
+          sku: newVariant.sku.trim(),
+          label: newVariant.label.trim(),
+          price: Number(newVariant.price) || 0,
+          stockQuantity: Number(newVariant.stockQuantity) || 0,
+        }),
+      });
+      if (json.error) throw new Error(json.error.message);
+      setVariants((prev) => [
+        ...prev,
+        {
+          id: json.data.id,
+          sku: json.data.sku,
+          label: json.data.variantAttributes?.label || '',
+          price: String(json.data.price),
+          stockQuantity: String(json.data.stockQuantity),
+          reservedQuantity: 0,
+        },
+      ]);
+      setNewVariant({ sku: '', label: '', price: 0, stockQuantity: 0 });
+      flash(`Đã thêm biến thể ${newVariant.sku}.`);
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setAddingVariant(false);
+    }
+  }
+
   const inputCls = 'w-full border border-gray-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-black';
   const labelCls = 'block text-xs uppercase tracking-widest text-gray-500 mb-2';
 
