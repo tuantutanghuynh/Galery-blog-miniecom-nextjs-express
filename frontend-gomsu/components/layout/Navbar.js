@@ -63,7 +63,15 @@ export default function Navbar() {
         {/* Auth buttons */}
         {user ? (
           <div className="hidden md:flex items-center gap-4">
-            <span className="text-xs text-gomsu-text-muted">{user.fullName || user.email}</span>
+            <Link 
+              href={user.role === 'admin' ? '/admin/posts' : '/user'} 
+              className="text-xs text-gomsu-text-muted hover:text-white transition-colors flex items-center gap-2"
+            >
+              {user.role === 'admin' ? (
+                <span className="bg-gomsu-primary text-black px-2 py-0.5 rounded-sm font-bold tracking-widest text-[10px]">ADMIN</span>
+              ) : null}
+              {user.fullName || user.email}
+            </Link>
             <button
               onClick={logout}
               className="text-xs uppercase tracking-widest text-gomsu-primary hover:text-gomsu-text transition-colors"

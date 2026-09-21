@@ -9,7 +9,7 @@ export function useAuth() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('miniecom_access_token');
     if (!token) {
       setIsLoading(false);
       return;
@@ -24,13 +24,13 @@ export function useAuth() {
         if (d.data) {
           setUser(d.data);
         } else {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('miniecom_access_token');
+          localStorage.removeItem('miniecom_refresh_token');
         }
       })
       .catch(() => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('miniecom_access_token');
+        localStorage.removeItem('miniecom_refresh_token');
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -44,8 +44,8 @@ export function useAuth() {
     const json = await res.json();
     if (!json.data) throw new Error(json.error?.message || 'Login failed');
 
-    localStorage.setItem('accessToken', json.data.accessToken);
-    localStorage.setItem('refreshToken', json.data.refreshToken);
+    localStorage.setItem('miniecom_access_token', json.data.accessToken);
+    localStorage.setItem('miniecom_refresh_token', json.data.refreshToken);
     setUser(json.data.user);
     return json.data;
   }
@@ -59,15 +59,15 @@ export function useAuth() {
     const json = await res.json();
     if (!json.data) throw new Error(json.error?.message || 'Register failed');
 
-    localStorage.setItem('accessToken', json.data.accessToken);
-    localStorage.setItem('refreshToken', json.data.refreshToken);
+    localStorage.setItem('miniecom_access_token', json.data.accessToken);
+    localStorage.setItem('miniecom_refresh_token', json.data.refreshToken);
     setUser(json.data.user);
     return json.data;
   }
 
   function logout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('miniecom_access_token');
+    localStorage.removeItem('miniecom_refresh_token');
     setUser(null);
     router.push('/');
   }

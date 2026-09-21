@@ -93,7 +93,7 @@ export async function authFetch(path, options = {}) {
       // Refresh thất bại (token hỏng/hết hạn/không có) -> xoá token & đuổi về login
       clearTokens();
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = '/admin/login';
+      window.location.href = '/auth/login';
       throw err;
     }
   }

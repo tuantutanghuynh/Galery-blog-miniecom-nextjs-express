@@ -18,6 +18,8 @@ export default function RegisterPage() {
 
   // Password validation state
   const [pwdFocus, setPwdFocus] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const rules = [
     { id: 'length', label: 'Ít nhất 8 ký tự', isValid: password.length >= 8 },
     { id: 'upper', label: 'Ít nhất 1 chữ hoa', isValid: /[A-Z]/.test(password) },
@@ -121,15 +123,24 @@ export default function RegisterPage() {
               <label className="block text-xs uppercase tracking-widest text-gray-600 mb-2">
                 Mật khẩu <span className="text-red-600">*</span>
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setPwdFocus(true)}
-                placeholder="••••••••"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-black"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setPwdFocus(true)}
+                  placeholder="••••••••"
+                  className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-black pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none text-xs"
+                >
+                  {showPassword ? 'Ẩn' : 'Hiện'}
+                </button>
+              </div>
               {(pwdFocus || password.length > 0) && (
                 <div className="mt-3 bg-gray-50 border border-gray-200 rounded p-3">
                   <p className="text-xs font-medium text-gray-700 mb-2">Yêu cầu mật khẩu:</p>
@@ -148,14 +159,23 @@ export default function RegisterPage() {
               <label className="block text-xs uppercase tracking-widest text-gray-600 mb-2">
                 Xác nhận mật khẩu <span className="text-red-600">*</span>
               </label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-black"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-black pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none text-xs"
+                >
+                  {showConfirmPassword ? 'Ẩn' : 'Hiện'}
+                </button>
+              </div>
             </div>
 
             <button

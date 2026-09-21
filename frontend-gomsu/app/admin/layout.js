@@ -18,14 +18,14 @@ export default function AdminLayout({ children }) {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
   
-  const isLoginPage = pathname === '/admin/login';
+  const isLoginPage = pathname === '/auth/login';
 
   useEffect(() => {
     const hasToken = getToken();
     
     if (!hasToken && !isLoginPage) {
       // Chưa đăng nhập mà ráng vô admin -> Đuổi về login
-      router.push('/admin/login');
+      router.push('/auth/login');
     } else if (hasToken && isLoginPage) {
       // Đã đăng nhập rồi mà lỡ vô nhầm trang login -> Bê vô admin luôn
       router.push('/admin/posts');
@@ -49,7 +49,7 @@ export default function AdminLayout({ children }) {
       }
     }
     clearTokens();
-    router.push('/admin/login');
+    router.push('/auth/login');
   }
 
   // Chờ kiểm tra token xong mới render UI để tránh hiện tượng "nháy" (flicker) giao diện

@@ -13,10 +13,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.push('/');
+      if (user.role === 'admin') {
+        router.push('/admin/posts');
+      } else {
+        router.push('/');
+      }
     }
   }, [user, isLoading, router]);
 
@@ -33,8 +38,12 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login(email, password);
-      router.push('/');
+      const result = await login(email, password);
+      if (result.user.role === 'admin') {
+        router.push('/admin/posts');
+      } else {
+        router.push('/');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -78,14 +87,23 @@ export default function LoginPage() {
               <label className="block text-xs uppercase tracking-widest text-gray-600 mb-2">
                 Mật khẩu <span className="text-red-600">*</span>
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-black"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-black pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none text-xs"
+                >
+                  {showPassword ? 'Ẩn' : 'Hiện'}
+                </button>
+              </div>
             </div>
 
             <button
