@@ -1,7 +1,8 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const prisma = require('../services/prisma');
-const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../services/jwt.service');
+const { signAccessToken } = require('../services/jwt.service');
+const { issueRefreshToken, rotateRefreshToken, revokeRefreshToken } = require('../services/token.service');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { sendSuccess } = require('../utils/ApiResponse');
@@ -15,7 +16,7 @@ const register = asyncHandler(async (req, res) => {
     data: { email, passwordHash, fullName, role: 'customer' },
   });
   const accessToken = signAccessToken({ sub: user.id, role: user.role });
-  const refreshToken = signRefreshToken({ sub: user.id });
+  const refreshToken = await issueRefreshToken(user.id);
   sendSuccess(res, {
     user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
     accessToken,
@@ -30,7 +31,7 @@ const login = asyncHandler(async (req, res) => {
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Email hoặc mật khẩu không đúng');
   const accessToken = signAccessToken({ sub: user.id, role: user.role });
-  const refreshToken = signRefreshToken({ sub: user.id });
+  const refreshToken = await issueRefreshToken(user.id);
   sendSuccess(res, {
     user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
     accessToken,
@@ -41,9 +42,18 @@ const login = asyncHandler(async (req, res) => {
 const refresh = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken) throw new ApiError(401, 'NO_REFRESH_TOKEN', 'Refresh token không được cung cấp');
-  const payload = verifyRefreshToken(refreshToken);
-  if (!payload) throw new ApiError(401, 'INVALID_REFRESH_TOKEN', 'Refresh token không hợp lệ hoặc hết hạn');
-  const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+
+  const rotated = await rotateRefreshToken(refreshToken);
+  if (!rotated) {
+    throw new ApiError(401, 'INVALID_REFRESH_TOKEN', 'Refresh token không hợp lệ, bị thu hồi hoặc hết hạn');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: rotated.userId } });
+  if (!user) throw new ApiError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
+
+  const accessToken = signAccessToken({ sub: user.id, role: user.role });
+  sendSuccess(res, { accessToken, refreshToken: rotated.rawToken });
+});
   if (!user) throw new ApiError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
   const accessToken = signAccessToken({ sub: user.id, role: user.role });
   const newRefreshToken = signRefreshToken({ sub: user.id });
@@ -95,4 +105,13 @@ const resetPassword = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Mật khẩu đã được đặt lại thành công' });
 });
 
-module.exports = { register, login, refresh, me, requestPasswordReset, resetPassword };
+
+const logout = asyncHandler(async (req, res) => {
+  const { refreshToken } = req.body;
+  if (refreshToken) {
+    await revokeRefreshToken(refreshToken);
+  }
+  sendSuccess(res, { message: 'Đăng xuất thành công' });
+});
+
+module.exports = { register, login, refresh, logout, me, requestPasswordReset, resetPassword };
