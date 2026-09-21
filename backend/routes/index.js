@@ -6,6 +6,7 @@ router.use('/products', require('./product.route'));
 router.use('/cart', require('./cart.route'));
 router.use('/orders', require('./order.route'));
 router.use('/settings', require('./setting.route'));
+router.use('/quote-requests', require('./quoteRequest.route'));
 
 router.use('/blog', require('./blog.route'));
 router.use('/uploads', require('./upload.route'));
