@@ -1,18 +1,33 @@
 import Image from 'next/image';
+import { apiFetch } from '@/lib/apiClient';
+import VisualEditorOverlay from '@/components/ui/VisualEditorOverlay';
 
 export const metadata = {
   title: 'Về Chúng Tôi | Nghĩa Phái Art',
   description: 'Tiểu sử nghệ sĩ Nguyễn Đức Nghĩa',
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  let settings = {};
+
+  try {
+    const res = await apiFetch('/settings?keys=about_background,about_portrait', { cache: 'no-store' });
+    settings = res?.data || {};
+  } catch (error) {
+    console.error('Lỗi khi tải cấu hình trang Về chúng tôi:', error.message);
+  }
+
+  const backgroundUrl = settings.about_background || '/images/about/nghia-profile.jpg';
+  const portraitUrl = settings.about_portrait || '/images/about/nghia-profile.jpg';
+
   return (
     <div className="min-h-screen bg-gomsu-background pb-32">
       {/* Header Héro */}
-      <div className="relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center overflow-hidden">
+      <div className="group relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center overflow-hidden">
+        <VisualEditorOverlay settingKey="about_background" />
         <div className="absolute inset-0 z-0">
           <Image
-            src="/images/about/nghia-profile.jpg"
+            src={backgroundUrl}
             alt="Nguyễn Đức Nghĩa"
             fill
             className="object-cover object-center opacity-30 scale-105"
@@ -38,9 +53,10 @@ export default function AboutPage() {
         
         <div className="md:col-span-5 relative">
           <div className="sticky top-32">
-            <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/10 shadow-2xl">
+            <div className="group relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/10 shadow-2xl">
+              <VisualEditorOverlay settingKey="about_portrait" />
               <Image
-                src="/images/about/nghia-profile.jpg"
+                src={portraitUrl}
                 alt="Chân dung Nguyễn Đức Nghĩa"
                 fill
                 className="object-cover"
