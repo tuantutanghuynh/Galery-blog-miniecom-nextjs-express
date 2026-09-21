@@ -1,9 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export function useAuth() {
+const AuthContext = createContext();
+
+// express-validator trả lỗi cụ thể trong error.details[], còn error.message chỉ là câu chung
+// "Dữ liệu không hợp lệ". Ưu tiên câu cụ thể để người dùng biết mình sai ở đâu.
+function readError(json, fallback) {
+  const err = json.error;
+  if (!err) return fallback;
+  return err.details?.[0]?.msg || err.message || fallback;
+}
+
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -15,7 +25,6 @@ export function useAuth() {
       return;
     }
 
-    // Kiểm tra token có hợp lệ không bằng cách gọi GET /auth/me
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -42,7 +51,7 @@ export function useAuth() {
       body: JSON.stringify({ email, password }),
     });
     const json = await res.json();
-    if (!json.data) throw new Error(json.error?.message || 'Login failed');
+    if (!json.data) throw new Error(readError(json, 'Đăng nhập thất bại'));
 
     localStorage.setItem('miniecom_access_token', json.data.accessToken);
     localStorage.setItem('miniecom_refresh_token', json.data.refreshToken);
@@ -57,7 +66,7 @@ export function useAuth() {
       body: JSON.stringify({ email, password, confirmPassword: password, fullName }),
     });
     const json = await res.json();
-    if (!json.data) throw new Error(json.error?.message || 'Register failed');
+    if (!json.data) throw new Error(readError(json, 'Đăng ký thất bại'));
 
     localStorage.setItem('miniecom_access_token', json.data.accessToken);
     localStorage.setItem('miniecom_refresh_token', json.data.refreshToken);
@@ -72,5 +81,13 @@ export function useAuth() {
     router.push('/');
   }
 
-  return { user, isLoading, login, register, logout, isAuthenticated: !!user };
+  return (
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, isAuthenticated: !!user }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
 }

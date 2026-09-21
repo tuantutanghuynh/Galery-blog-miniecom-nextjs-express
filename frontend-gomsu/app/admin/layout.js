@@ -1,8 +1,8 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { getToken, getRefreshToken, clearTokens } from '@/lib/adminAuth';
+import { useAuth } from '@/lib/useAuth';
 
 const NAV_ITEMS = [
   { name: 'Sản phẩm', path: '/admin/products' },
@@ -16,48 +16,20 @@ const NAV_ITEMS = [
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
-  
-  const isLoginPage = pathname === '/auth/login';
+  const { user, isLoading, logout } = useAuth();
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    const hasToken = getToken();
-    
-    if (!hasToken && !isLoginPage) {
-      // Chưa đăng nhập mà ráng vô admin -> Đuổi về login
-      router.push('/auth/login');
-    } else if (hasToken && isLoginPage) {
-      // Đã đăng nhập rồi mà lỡ vô nhầm trang login -> Bê vô admin luôn
-      router.push('/admin/posts');
-    } else {
-      // Hợp lệ (Đã login và ở admin, hoặc chưa login và ở trang login)
-      setIsChecking(false);
-    }
-  }, [isLoginPage, router]);
+    if (isLoading) return;
+    if (!user) router.push('/auth/login');
+    else if (!isAdmin) router.push('/');
+  }, [user, isAdmin, isLoading, router]);
 
-  async function handleLogout() {
-    const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken })
-        });
-      } catch (err) {
-        console.error('Lỗi khi gọi API logout', err);
-      }
-    }
-    clearTokens();
-    router.push('/auth/login');
-  }
-
-  // Chờ kiểm tra token xong mới render UI để tránh hiện tượng "nháy" (flicker) giao diện
-  if (isChecking && !isLoginPage) {
+  // Chờ xác thực xong mới render UI để tránh hiện tượng "nháy" (flicker) giao diện
+  if (isLoading || !isAdmin) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">Đang tải...</div>;
   }
-
-  if (isLoginPage) return children; // không bọc sidebar cho trang login
 
   return (
     <div className="min-h-screen flex font-sans bg-gray-50">
@@ -86,8 +58,8 @@ export default function AdminLayout({ children }) {
           })}
         </nav>
         <div className="p-4 border-t border-[#222]">
-          <button 
-            onClick={handleLogout} 
+          <button
+            onClick={logout}
             className="w-full text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 text-left px-4 py-3 transition-colors"
           >
             Đăng xuất
