@@ -1,5 +1,7 @@
 'use client';
 
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
+
 const ACCESS_KEY = 'miniecom_access_token';
 const REFRESH_KEY = 'miniecom_refresh_token';
 
@@ -62,6 +64,9 @@ export async function authFetch(path, options = {}) {
   const isFormData = typeof window !== 'undefined' && options.body instanceof FormData;
   const customHeaders = {
     Authorization: `Bearer ${token}`,
+    // Route /quote-requests bắt buộc có header này, thiếu là 400. Gắn ở đây để không nơi
+    // gọi nào phải nhớ; route khác nhận thừa cũng không sao.
+    'X-Brand-Slug': BRAND_CATEGORY_SLUG,
     ...options.headers,
   };
 
