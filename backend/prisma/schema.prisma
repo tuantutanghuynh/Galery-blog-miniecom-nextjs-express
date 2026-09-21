@@ -227,10 +227,21 @@ model QuoteRequest {
   note         String?
   items        Json
   status       String   @default("NEW")
+
+  // Số tiền chốt thật và thời điểm chốt, nhân viên nhập khi bấm "Đã chốt".
+  //
+  // Phải là trường riêng chứ không tính lại từ `items`: giá trong `items` là giá khách xem
+  // trên web, còn nhân viên gọi điện thì mặc cả, cộng phí ship, giảm cho khách quen — con số
+  // cuối cùng gần như luôn khác. Thống kê doanh thu dựng trên `items` sẽ sai ngay từ ngày đầu.
+  finalAmount  Int?
+  closedAt     DateTime?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([brandSlug, status, createdAt])
+  // Phục vụ thống kê doanh thu theo khoảng thời gian.
+  @@index([brandSlug, closedAt])
 }
 
 // Bảng cấu hình lưu trữ các thiết lập động cho giao diện trang web (CMS)

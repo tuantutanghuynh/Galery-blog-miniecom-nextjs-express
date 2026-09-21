@@ -25,6 +25,7 @@ router.post('/', submitLimiter, ctrl.submit);
 
 router.use('/admin', authenticate, requireRole('admin'));
 router.get('/admin/list', ctrl.adminList);
+router.get('/admin/stats', ctrl.stats);
 router.patch('/admin/:id/status', ctrl.updateStatus);
 router.delete('/admin/:id', ctrl.remove);
 

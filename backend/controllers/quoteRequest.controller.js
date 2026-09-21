@@ -117,30 +117,108 @@ const adminList = asyncHandler(async (req, res) => {
 
 // Nhân viên đánh dấu đã gọi hoặc đã chốt. Kiểm tra brand trong cùng câu lệnh update để người
 // của brand này không sửa được yêu cầu của brand kia.
+//
+// Chốt đơn bắt buộc kèm số tiền thật đã thoả thuận — đó là con số duy nhất dùng được cho
+// thống kê doanh thu. Rời khỏi trạng thái chốt thì xoá cả hai trường, để không còn bản ghi
+// nào mang số tiền chốt mà lại không ở trạng thái đã chốt.
 const updateStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { status, finalAmount } = req.body;
   if (!QUOTE_STATUS[status]) {
     throw new ApiError(400, 'INVALID_STATUS', 'Trạng thái không hợp lệ.');
   }
 
+  const data = { status };
+
+  if (status === QUOTE_STATUS.CLOSED) {
+    const amount = Number(finalAmount);
+    if (!Number.isInteger(amount) || amount < 0) {
+      throw new ApiError(400, 'INVALID_AMOUNT', 'Vui lòng nhập số tiền đã chốt.');
+    }
+    data.finalAmount = amount;
+    data.closedAt = new Date();
+  } else {
+    data.finalAmount = null;
+    data.closedAt = null;
+  }
+
   const { count } = await prisma.quoteRequest.updateMany({
     where: { id: req.params.id, brandSlug: req.brand.slug },
-    data: { status },
+    data,
   });
   if (count === 0) throw new ApiError(404, 'QUOTE_NOT_FOUND', 'Không tìm thấy yêu cầu.');
 
-  sendSuccess(res, { id: req.params.id, status });
+  sendSuccess(res, { id: req.params.id, ...data });
 });
 
-// Xoá hẳn, dùng để dọn spam lọt qua honeypot. Không có thùng rác và không hoàn tác được nên
-// giao diện admin phải hỏi lại trước khi gọi.
+// Doanh thu và tỉ lệ chốt theo khoảng thời gian, tính trên số tiền thật chứ không phải giá
+// khách xem trên web. `from`/`to` là chuỗi ngày ISO; thiếu thì lấy toàn bộ lịch sử.
+const stats = asyncHandler(async (req, res) => {
+  const { from, to } = req.query;
+
+  const closedWhere = { brandSlug: req.brand.slug, closedAt: { not: null } };
+  if (from || to) {
+    closedWhere.closedAt = {
+      not: null,
+      ...(from ? { gte: new Date(from) } : {}),
+      ...(to ? { lte: new Date(to) } : {}),
+    };
+  }
+
+  const createdWhere = { brandSlug: req.brand.slug };
+  if (from || to) {
+    createdWhere.createdAt = {
+      ...(from ? { gte: new Date(from) } : {}),
+      ...(to ? { lte: new Date(to) } : {}),
+    };
+  }
+
+  const [closed, totalRequests] = await Promise.all([
+    prisma.quoteRequest.aggregate({
+      where: closedWhere,
+      _sum: { finalAmount: true },
+      _count: true,
+    }),
+    prisma.quoteRequest.count({ where: createdWhere }),
+  ]);
+
+  const closedCount = closed._count || 0;
+  const revenue = closed._sum.finalAmount || 0;
+
+  sendSuccess(res, {
+    totalRequests,
+    closedCount,
+    revenue,
+    averageOrderValue: closedCount > 0 ? Math.round(revenue / closedCount) : 0,
+    conversionRate: totalRequests > 0 ? Math.round((closedCount / totalRequests) * 100) : 0,
+  });
+});
+
+// Xoá hẳn, dùng để dọn spam lọt qua honeypot. Không có thùng rác và không hoàn tác được.
+//
+// Chỉ xoá được yêu cầu còn ở trạng thái "chưa gọi", vì spam thì luôn nằm ở đó. Đơn đã gọi là
+// đã có người thật nói chuyện, đơn đã chốt là một lần bán hàng thật — xoá chúng là xoá sổ
+// sách, và thống kê doanh thu sẽ hụt đi mà không ai biết. Chặn ngay trong câu lệnh xoá chứ
+// không chỉ ẩn nút trên giao diện, vì giao diện không phải là nơi bảo vệ dữ liệu.
 const remove = asyncHandler(async (req, res) => {
   const { count } = await prisma.quoteRequest.deleteMany({
-    where: { id: req.params.id, brandSlug: req.brand.slug },
+    where: { id: req.params.id, brandSlug: req.brand.slug, status: QUOTE_STATUS.NEW },
   });
-  if (count === 0) throw new ApiError(404, 'QUOTE_NOT_FOUND', 'Không tìm thấy yêu cầu.');
+
+  if (count === 0) {
+    const existing = await prisma.quoteRequest.findFirst({
+      where: { id: req.params.id, brandSlug: req.brand.slug },
+    });
+    if (existing) {
+      throw new ApiError(
+        409,
+        'QUOTE_NOT_DELETABLE',
+        'Chỉ xoá được yêu cầu chưa gọi. Yêu cầu đã gọi hoặc đã chốt là dữ liệu bán hàng.'
+      );
+    }
+    throw new ApiError(404, 'QUOTE_NOT_FOUND', 'Không tìm thấy yêu cầu.');
+  }
 
   sendSuccess(res, { message: 'Đã xoá yêu cầu.' });
 });
 
-module.exports = { submit, adminList, updateStatus, remove, QUOTE_STATUS };
+module.exports = { submit, adminList, updateStatus, stats, remove, QUOTE_STATUS };
