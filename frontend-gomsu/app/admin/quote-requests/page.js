@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { authFetch } from '@/lib/adminAuth';
+import { getImageUrl } from '@/lib/utils';
 
 const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
@@ -186,12 +187,27 @@ export default function AdminQuoteRequestsPage() {
                 <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Sản phẩm khách quan tâm</p>
                 <div className="border rounded divide-y">
                   {selected.items.map((item, idx) => (
-                    <div key={idx} className="p-3 flex justify-between items-center text-sm">
-                      <div>
+                    <div key={idx} className="p-3 flex gap-3 justify-between items-center text-sm">
+                      {/* Ảnh giúp nhân viên nhận ra món khách hỏi ngay khi đang nghe điện
+                          thoại, không phải mở thêm tab tra tên sản phẩm. */}
+                      {item.imageUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={getImageUrl(item.imageUrl)}
+                          alt={item.productName}
+                          className="w-14 h-14 object-cover rounded border shrink-0"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded border bg-gray-50 shrink-0 flex items-center justify-center text-[10px] text-gray-400 text-center leading-tight">
+                          Chưa<br />có ảnh
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium">{item.productName}</p>
                         <p className="text-xs text-gray-500">{item.variantLabel} · SKU {item.sku}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <p>{formatPrice(item.unitPrice)} × {item.quantity}</p>
                         <p className="font-medium">{formatPrice(item.lineTotal)}</p>
                       </div>
