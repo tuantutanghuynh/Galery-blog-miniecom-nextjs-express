@@ -12,7 +12,25 @@ export default function VisualEditorOverlay({ settingKey }) {
 
   useEffect(() => {
     const token = getToken();
-    if (token) setIsAdmin(true);
+    if (!token) return;
+
+    // Silent check to verify if token is actually valid and user is admin
+    // We don't use authFetch here because we don't want to redirect public users to /admin/login if token is expired
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data?.data?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          // It's a customer token or invalid token, ignore
+          setIsAdmin(false);
+        }
+      })
+      .catch(() => {
+        setIsAdmin(false);
+      });
   }, []);
 
   const handleUpload = async (e) => {
