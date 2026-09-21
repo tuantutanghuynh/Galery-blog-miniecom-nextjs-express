@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -19,8 +20,15 @@ export default function LoginPage() {
     }
   }, [user, isLoading, router]);
 
+  useEffect(() => {
+    if (attemptedSubmit && !error) {
+      setAttemptedSubmit(false);
+    }
+  }, [error, attemptedSubmit]);
+
   async function handleSubmit(e) {
     e.preventDefault();
+    setAttemptedSubmit(true);
     setError('');
     setIsSubmitting(true);
 
@@ -44,27 +52,35 @@ export default function LoginPage() {
           <h1 className="font-serif text-3xl text-gray-900 mb-2">Đăng nhập</h1>
           <p className="text-sm text-gray-500 mb-8">Nhập email và mật khẩu để tiếp tục mua hàng.</p>
 
-          {error && <div className="mb-6 p-4 bg-red-50 border border-red-300 text-red-700 text-sm rounded">{error}</div>}
+          {attemptedSubmit && error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-300 text-red-700 text-sm rounded">{error}</div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-600 mb-2">Email</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-600 mb-2">
+                Email <span className="text-red-600">*</span>
+              </label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
                 className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-black"
               />
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-600 mb-2">Mật khẩu</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-600 mb-2">
+                Mật khẩu <span className="text-red-600">*</span>
+              </label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
                 className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-black"
               />
             </div>
