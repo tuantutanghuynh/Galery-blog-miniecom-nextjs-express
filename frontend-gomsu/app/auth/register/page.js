@@ -16,6 +16,17 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
+  // Password validation state
+  const [pwdFocus, setPwdFocus] = useState(false);
+  const rules = [
+    { id: 'length', label: 'Ít nhất 8 ký tự', isValid: password.length >= 8 },
+    { id: 'upper', label: 'Ít nhất 1 chữ hoa', isValid: /[A-Z]/.test(password) },
+    { id: 'lower', label: 'Ít nhất 1 chữ thường', isValid: /[a-z]/.test(password) },
+    { id: 'num', label: 'Ít nhất 1 chữ số', isValid: /[0-9]/.test(password) },
+    { id: 'spec', label: 'Ít nhất 1 ký tự đặc biệt', isValid: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+  ];
+  const isPasswordValid = rules.every(r => r.isValid);
+
   useEffect(() => {
     if (!isLoading && user) {
       router.push('/');
@@ -35,6 +46,11 @@ export default function RegisterPage() {
 
     if (password !== confirmPassword) {
       setError('Mật khẩu không khớp');
+      return;
+    }
+
+    if (!isPasswordValid) {
+      setError('Mật khẩu chưa đạt yêu cầu bảo mật');
       return;
     }
 
@@ -107,10 +123,22 @@ export default function RegisterPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setPwdFocus(true)}
                 placeholder="••••••••"
                 className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-black"
               />
-              <p className="text-xs text-gray-500 mt-2">Ít nhất 8 ký tự</p>
+              {(pwdFocus || password.length > 0) && (
+                <div className="mt-3 bg-gray-50 border border-gray-200 rounded p-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Yêu cầu mật khẩu:</p>
+                  <ul className="space-y-1.5">
+                    {rules.map((rule) => (
+                      <li key={rule.id} className={`text-xs flex items-center gap-2 ${rule.isValid ? 'text-green-600' : 'text-gray-500'}`}>
+                        {rule.isValid ? '✓' : '○'} {rule.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div>

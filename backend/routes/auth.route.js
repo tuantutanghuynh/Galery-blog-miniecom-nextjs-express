@@ -8,7 +8,12 @@ router.post(
   '/register',
   [
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 }).withMessage('Mật khẩu phải ít nhất 8 ký tự'),
+    body('password')
+      .isLength({ min: 8 }).withMessage('Mật khẩu phải ít nhất 8 ký tự')
+      .matches(/[A-Z]/).withMessage('Mật khẩu phải chứa ít nhất một chữ hoa')
+      .matches(/[a-z]/).withMessage('Mật khẩu phải chứa ít nhất một chữ thường')
+      .matches(/[0-9]/).withMessage('Mật khẩu phải chứa ít nhất một chữ số')
+      .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage('Mật khẩu phải chứa ít nhất một ký tự đặc biệt'),
     body('confirmPassword').custom((val, { req }) => val === req.body.password).withMessage('Xác nhận mật khẩu không khớp'),
     body('fullName').optional().trim().notEmpty(),
     validate,
@@ -41,7 +46,12 @@ router.post(
   [
     body('email').isEmail().normalizeEmail(),
     body('token').notEmpty(),
-    body('newPassword').isLength({ min: 8 }).withMessage('Mật khẩu phải ít nhất 8 ký tự'),
+    body('newPassword')
+      .isLength({ min: 8 }).withMessage('Mật khẩu phải ít nhất 8 ký tự')
+      .matches(/[A-Z]/).withMessage('Mật khẩu phải chứa ít nhất một chữ hoa')
+      .matches(/[a-z]/).withMessage('Mật khẩu phải chứa ít nhất một chữ thường')
+      .matches(/[0-9]/).withMessage('Mật khẩu phải chứa ít nhất một chữ số')
+      .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage('Mật khẩu phải chứa ít nhất một ký tự đặc biệt'),
     validate,
   ],
   ctrl.resetPassword
