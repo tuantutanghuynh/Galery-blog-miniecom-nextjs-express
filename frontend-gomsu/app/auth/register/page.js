@@ -78,6 +78,9 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gomsu-background flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-black transition-colors mb-6 uppercase tracking-widest">
+            <span>&larr;</span> Về trang chủ
+          </Link>
           <h1 className="font-serif text-3xl text-gray-900 mb-2">Đăng ký</h1>
           <p className="text-sm text-gray-500 mb-8">Tạo tài khoản để mua sắm tại Nghĩa Phái.</p>
 
