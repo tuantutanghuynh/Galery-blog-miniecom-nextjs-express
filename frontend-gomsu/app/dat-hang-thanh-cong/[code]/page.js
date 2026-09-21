@@ -68,7 +68,13 @@ export default function OrderSuccessPage({ params }) {
   }
 
   const isBankTransfer = order.paymentMethod === 'BANK_TRANSFER';
-  const qrUrl = `https://img.vietqr.io/image/${bankSettings.bank_id}-${bankSettings.bank_account_no}-compact2.png?amount=${order.grandTotal}&addInfo=${order.code}&accountName=${encodeURIComponent(bankSettings.bank_account_name)}`;
+  // Thiếu cấu hình thì phải ra null chứ không dựng URL: nội suy thẳng vào template khi
+  // bankSettings rỗng sẽ cho ra ".../undefined-undefined-compact2.png" — khách vừa đặt hàng
+  // xong nhìn thấy một ảnh vỡ. Hiện tại 3 key này chưa được đặt nên đó là trạng thái thật.
+  const hasBankConfig = Boolean(bankSettings.bank_id && bankSettings.bank_account_no);
+  const qrUrl = hasBankConfig
+    ? `https://img.vietqr.io/image/${bankSettings.bank_id}-${bankSettings.bank_account_no}-compact2.png?amount=${order.grandTotal}&addInfo=${order.code}&accountName=${encodeURIComponent(bankSettings.bank_account_name || '')}`
+    : null;
 
   return (
     <div className="min-h-screen bg-gomsu-background text-gomsu-text px-6 py-12 md:px-12 max-w-4xl mx-auto">
@@ -96,15 +102,23 @@ export default function OrderSuccessPage({ params }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             {/* VietQR Image using plain <img> tag to avoid Next.js Image Optimization quota */}
-            <div className="flex flex-col items-center bg-white p-4 rounded-sm border border-gray-300">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrUrl}
-                alt={`Mã VietQR thanh toán đơn hàng ${order.code}`}
-                className="max-w-[280px] w-full h-auto object-contain"
-              />
-              <p className="text-[11px] text-gray-600 mt-2 font-sans text-center">Quét bằng ứng dụng Ngân hàng hoặc Mobile Banking</p>
-            </div>
+            {qrUrl ? (
+              <div className="flex flex-col items-center bg-white p-4 rounded-sm border border-gray-300">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qrUrl}
+                  alt={`Mã VietQR thanh toán đơn hàng ${order.code}`}
+                  className="max-w-[280px] w-full h-auto object-contain"
+                />
+                <p className="text-[11px] text-gray-600 mt-2 font-sans text-center">Quét bằng ứng dụng Ngân hàng hoặc Mobile Banking</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center border border-dashed border-gomsu-border p-6 text-center min-h-[200px]">
+                <p className="text-sm text-gomsu-text-muted">
+                  Cửa hàng chưa cấu hình tài khoản nhận tiền. Vui lòng liên hệ để được hướng dẫn thanh toán.
+                </p>
+              </div>
+            )}
 
             {/* Bank details list */}
             <div className="space-y-4 text-xs">

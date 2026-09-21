@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
+import ProductPurchasePanel from '@/components/product/ProductPurchasePanel';
 
 // Lấy một sản phẩm theo slug, trả về null nếu không có thay vì để lỗi bắn lên. Trang gọi hàm
 // này ở hai nơi (generateMetadata và component), nên nó phải chịu được việc sản phẩm không
@@ -207,19 +208,13 @@ export default async function ProductDetailPage({ params }) {
             </div>
           )}
 
-          {/* Chưa có giỏ hàng nên đây là đường đặt hàng thật, không phải nút giả. Khi phần
-              giỏ hàng xong sẽ thay bằng nút thêm vào giỏ. */}
-          <div className="flex flex-col gap-3 pt-4">
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 border border-gomsu-primary/50 text-gomsu-primary hover:bg-gomsu-primary hover:text-black transition-colors uppercase text-xs tracking-widest"
-            >
-              Liên hệ đặt hàng <span>&rarr;</span>
-            </Link>
-            <p className="text-xs text-gomsu-text-muted text-center">
-              Mỗi sản phẩm được tạo hình thủ công, chúng tôi sẽ tư vấn và đóng gói riêng cho bạn.
-            </p>
-          </div>
+          {/* Khối chọn phiên bản + thêm vào giỏ. Tách sang client component để trang này
+              vẫn là Server Component, giữ generateMetadata và JSON-LD cho SEO. */}
+          <ProductPurchasePanel product={product} />
+
+          <p className="text-xs text-gomsu-text-muted text-center pt-2">
+            Mỗi sản phẩm được tạo hình thủ công, chúng tôi sẽ tư vấn và đóng gói riêng cho bạn.
+          </p>
         </div>
       </div>
     </article>

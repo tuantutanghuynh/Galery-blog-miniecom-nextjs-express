@@ -258,9 +258,12 @@ export default function CheckoutPage() {
               <span>Tạm tính:</span>
               <span className="text-white font-medium">{formatPrice(cart.subtotal)}</span>
             </div>
+            {/* Backend trả shippingFee = 0 qua hằng số SHIPPING_FEE_NOT_CALCULATED, nghĩa là
+                "chưa tính" chứ không phải "miễn phí". Hiện "miễn phí" ở đây là hứa với khách
+                một điều cửa hàng chưa hề cam kết. */}
             <div className="flex justify-between text-gomsu-text-muted">
               <span>Phí vận chuyển:</span>
-              <span className="text-emerald-400">Miễn phí giao hàng</span>
+              <span className="text-xs">Báo sau khi xác nhận đơn</span>
             </div>
           </div>
 
