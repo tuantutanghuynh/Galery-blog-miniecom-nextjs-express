@@ -1,10 +1,16 @@
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Gọi API backend bằng fetch gốc (không dùng axios) để tận dụng cơ chế cache/revalidate
 // tích hợp sẵn của Next.js (`next: { revalidate, tags }`) — axios không tham gia được
 // cơ chế này vì nó không chạy qua hàm fetch mà Next.js đã "độ" lại.
 export async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_URL}${path}`, options);
+  // Gắn ở một chỗ thay vì rắc ở từng lời gọi: route /quote-requests bắt buộc có header này,
+  // thiếu là 400. Route khác nhận thừa cũng không sao.
+  const headers = { 'X-Brand-Slug': BRAND_CATEGORY_SLUG, ...options.headers };
+
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
   const json = await res.json();
 
   if (!res.ok) {

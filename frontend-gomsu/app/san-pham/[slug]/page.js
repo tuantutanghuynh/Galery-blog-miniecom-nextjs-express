@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getImageUrl } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
+import AddToQuoteList from '@/components/product/AddToQuoteList';
 
 const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
@@ -209,19 +210,7 @@ export default async function ProductDetailPage({ params }) {
             </div>
           )}
 
-          {/* Chưa có giỏ hàng nên đây là đường đặt hàng thật, không phải nút giả. Khi phần
-              giỏ hàng xong sẽ thay bằng nút thêm vào giỏ. */}
-          <div className="flex flex-col gap-3 pt-4">
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 border border-gomsu-primary/50 text-gomsu-primary hover:bg-gomsu-primary hover:text-black transition-colors uppercase text-xs tracking-widest"
-            >
-              Liên hệ đặt hàng <span>&rarr;</span>
-            </Link>
-            <p className="text-xs text-gomsu-text-muted text-center">
-              Mỗi sản phẩm được tạo hình thủ công, chúng tôi sẽ tư vấn và đóng gói riêng cho bạn.
-            </p>
-          </div>
+          <AddToQuoteList product={product} />
         </div>
       </div>
     </article>
