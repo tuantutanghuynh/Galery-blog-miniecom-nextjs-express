@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 
-export default function LoginPage() {
+function isValidRedirect(url) {
+  return typeof url === 'string' && url.startsWith('/') && !url.startsWith('//');
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawRedirect = searchParams.get('redirect');
+  const validRedirect = isValidRedirect(rawRedirect) ? rawRedirect : null;
+
   const { user, login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,13 +25,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      if (user.role === 'admin') {
+      if (validRedirect) {
+        router.push(validRedirect);
+      } else if (user.role === 'admin') {
         router.push('/admin/posts');
       } else {
         router.push('/');
       }
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, validRedirect]);
 
   useEffect(() => {
     if (attemptedSubmit && !error) {
@@ -39,7 +49,9 @@ export default function LoginPage() {
 
     try {
       const result = await login(email, password);
-      if (result.user.role === 'admin') {
+      if (validRedirect) {
+        router.push(validRedirect);
+      } else if (result.user.role === 'admin') {
         router.push('/admin/posts');
       } else {
         router.push('/');
@@ -130,5 +142,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gomsu-background">Đang tải...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

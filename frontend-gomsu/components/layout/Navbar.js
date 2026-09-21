@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/lib/useAuth';
+import { useCart } from '@/lib/useCart';
 
 const navLinks = [
   { name: 'Trang chủ', path: '/' },
@@ -20,6 +21,7 @@ const navLinks = [
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { totalQuantity } = useCart();
 
   return (
     <nav className="relative z-50 bg-gomsu-background flex items-center justify-between px-6 py-5 border-b border-gomsu-border">

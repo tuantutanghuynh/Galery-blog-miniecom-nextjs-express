@@ -2,6 +2,7 @@ import { Playfair_Display, Montserrat } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/layout/Navbar';
 import { AuthProvider } from '@/lib/useAuth';
+import { CartProvider } from '@/lib/useCart';
 
 const playfair = Playfair_Display({
   subsets: ['vietnamese'],
@@ -70,8 +71,10 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <AuthProvider>
-          <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <CartProvider>
+            <Navbar />
+            <main className="min-h-screen">{children}</main>
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>
