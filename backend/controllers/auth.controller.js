@@ -56,7 +56,9 @@ const refresh = asyncHandler(async (req, res) => {
 });
 
 const me = asyncHandler(async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  // authenticate gán req.user = { id, role } chứ không giữ nguyên payload JWT, nên phải đọc
+  // .id. Đọc .sub thì luôn nhận undefined và Prisma ném lỗi -> endpoint 500 với mọi token.
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) throw new ApiError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
   sendSuccess(res, { id: user.id, email: user.email, fullName: user.fullName, role: user.role });
 });
