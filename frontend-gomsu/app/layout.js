@@ -19,7 +19,7 @@ const montserrat = Montserrat({
 export const metadata = {
   title: { default: 'Nghĩa Phái Art & Design', template: '%s | Nghĩa Phái' },
   description: 'Hơi thở đất - Dáng hình thời gian. Gốm sứ nghệ thuật Bát Tràng.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app'),
   alternates: {
     canonical: '/',
   },
@@ -43,9 +43,9 @@ export default function RootLayout({ children }) {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'Nghĩa Phái Art & Design',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-    logo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/images/logo-nghia-phai-gom-su-bat-trang-v2.png`,
-    image: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/images/about/nghia-profile.jpg`,
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app',
+    logo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app'}/images/logo-nghia-phai-gom-su-bat-trang-v2.png`,
+    image: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app'}/images/about/nghia-profile.jpg`,
     description: 'Không gian gốm sứ nghệ thuật Bát Tràng thủ công cao cấp. Khám phá vẻ đẹp truyền thống và đương đại.',
     address: {
       '@type': 'PostalAddress',

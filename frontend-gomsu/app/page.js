@@ -16,24 +16,26 @@ export const metadata = {
 export default async function HomePage() {
   let galleryItems = [];
   let posts = [];
+  let settings = {};
 
   try {
-    const [galleryRes, postsRes] = await Promise.all([
+    const [galleryRes, postsRes, settingsRes] = await Promise.all([
       apiFetch(`/gallery?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=8`, { cache: 'no-store' }),
       apiFetch(`/blog?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=6`, { cache: 'no-store' }),
+      apiFetch(`/settings?keys=homepage_hero,homepage_artist,homepage_quote`, { cache: 'no-store' })
     ]);
     galleryItems = galleryRes.data || [];
     posts = postsRes.data || [];
+    settings = settingsRes?.data || {};
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu trang chủ:', error.message);
-    // Vẫn render trang nhưng với danh sách rỗng nếu database chưa có dữ liệu
   }
 
   return (
     <div>
-      <Hero />
-      <ArtistIntro />
-      <Quote />
+      <Hero imageUrl={settings.homepage_hero || '/images/hero-khong-gian-nghe-thuat.png'} />
+      <ArtistIntro imageUrl={settings.homepage_artist || '/images/artist-portrait.jpg'} />
+      <Quote imageUrl={settings.homepage_quote || '/images/quote-pattern.png'} />
       <FeaturedWorks items={galleryItems} />
       <LatestNews posts={posts} />
       <ContactSection />

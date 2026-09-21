@@ -37,9 +37,11 @@ export default function AdminLoginPage() {
         />
         <input
           type="password" required placeholder="Mật khẩu" value={password}
+          minLength={8}
           onChange={(e) => setPassword(e.target.value)}
           className="border border-gray-300 rounded px-3 py-2"
         />
+        <p className="text-xs text-gray-500 mt-[-4px]">Mật khẩu yêu cầu dài ít nhất 8 ký tự.</p>
         <button type="submit" className="bg-black text-white rounded px-3 py-2">Đăng nhập</button>
       </form>
       {error && <p className="text-red-600 mt-2">{error}</p>}

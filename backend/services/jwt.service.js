@@ -1,11 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { jwtAccessSecret } = require('../config/env');
-
-// Signing and verification of access tokens. Access tokens are the short-lived half of the
-// auth pair; the long-lived refresh tokens live in token.service.js and are stored in the
-// database, while these are stateless and never persisted.
+const { jwtAccessSecret, jwtRefreshSecret } = require('../config/env');
 
 const ACCESS_TOKEN_TTL = '15m';
+const REFRESH_TOKEN_TTL = '7d';
 
 // Signs a payload — `{ sub, role }` in this project — into an access token valid for 15
 // minutes. The TTL is deliberately short because a stateless JWT cannot be revoked once
@@ -25,4 +22,12 @@ function verifyAccessToken(token) {
     return jwt.verify(token, jwtAccessSecret);
 }
 
-module.exports = { signAccessToken, verifyAccessToken };
+function signRefreshToken(payload) {
+    return jwt.sign(payload, jwtRefreshSecret, { expiresIn: REFRESH_TOKEN_TTL });
+}
+
+function verifyRefreshToken(token) {
+    return jwt.verify(token, jwtRefreshSecret);
+}
+
+module.exports = { signAccessToken, verifyAccessToken, signRefreshToken, verifyRefreshToken };

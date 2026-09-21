@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import VisualEditorOverlay from '@/components/ui/VisualEditorOverlay';
 
 const STATS = [
   ['10+', 'Năm sáng tác'],
@@ -6,14 +7,16 @@ const STATS = [
   ['10+', 'Giải thưởng'],
 ];
 
-export default function ArtistIntro() {
+export default function ArtistIntro({ imageUrl }) {
   return (
     <section className="px-6 py-20 border-b border-gomsu-border">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
         {/* Left: Artist Portrait */}
-        <div className="relative w-full aspect-[4/5] md:aspect-[3/4]">
+        <div className="relative group w-full aspect-[4/5] md:aspect-[3/4]">
+          <VisualEditorOverlay settingKey="homepage_artist" />
+          
           <Image
-            src="/images/artist-portrait.jpg"
+            src={imageUrl}
             alt="Chân dung nghệ sĩ Gốm Bát Tràng"
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
@@ -48,13 +51,6 @@ export default function ArtistIntro() {
               </div>
             ))}
           </div>
-          
-          {/* Chỗ để chữ ký tay sau này (chỉ cần uncomment khi có ảnh chữ ký) */}
-          {/* 
-          <div className="mt-12">
-            <Image src="/images/signature.png" alt="Signature" width={150} height={60} className="opacity-80" />
-          </div> 
-          */}
         </div>
       </div>
     </section>

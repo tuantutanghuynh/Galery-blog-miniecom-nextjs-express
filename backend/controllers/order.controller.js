@@ -1,0 +1,295 @@
+const crypto = require('crypto');
+const prisma = require('../services/prisma');
+const ApiError = require('../utils/ApiError');
+const asyncHandler = require('../utils/asyncHandler');
+const { sendSuccess } = require('../utils/ApiResponse');
+const { PRODUCT_STATUS } = require('../constants/product');
+const {
+  ORDER_STATUS,
+  PAYMENT_METHOD,
+  PAYMENT_STATUS,
+  ORDER_TRANSITIONS,
+  PAYMENT_WINDOW_HOURS,
+  SHIPPING_FEE_NOT_CALCULATED,
+} = require('../constants/order');
+
+// Checkout and order management. This file owns the two things that must never go wrong in a shop:
+// money is always recalculated from the database rather than trusted from the client, and stock is
+// changed with a conditional UPDATE so two customers buying the last item cannot both succeed.
+
+// Builds a human-readable order code such as NP-260918-K3F9A2. The date makes support lookups easy;
+// the random tail exists so a customer cannot guess someone else's code by adding one to their own,
+// which a sequential counter would allow — and which would also leak how many orders the shop
+// takes per day. Six base-36 characters give about two billion combinations per day, and the unique
+// index on the column is the real guarantee if two ever collide.
+function generateOrderCode() {
+  const d = new Date();
+  const date = [
+    String(d.getFullYear()).slice(2),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('');
+  const tail = crypto.randomBytes(4).readUInt32BE(0).toString(36).toUpperCase().padStart(6, '0').slice(0, 6);
+  return `NP-${date}-${tail}`;
+}
+
+// Moves an order to a new status, refusing any transition the state machine does not allow. Every
+// status change goes through here rather than assigning `orderStatus` directly, because a stray
+// assignment could send a CANCELLED order back to CONFIRMED — resurrecting an order whose stock has
+// already been returned to the shelf, and selling goods that are no longer held for anyone.
+function assertTransition(from, to) {
+  const allowed = ORDER_TRANSITIONS[from] || [];
+  if (!allowed.includes(to)) {
+    throw new ApiError(409, 'INVALID_STATE_TRANSITION', `Không thể chuyển đơn từ ${from} sang ${to}`);
+  }
+}
+
+// Places an order from the caller's cart. Everything happens inside one transaction: prices are
+// re-read, stock is claimed, the order and its snapshot lines are written, and the cart is emptied.
+// Any failure rolls all of it back, so there is never a half-created order or stock held by an
+// order that does not exist.
+//
+// The two payment methods claim stock differently, and this is the decision the whole design rests
+// on. A bank transfer only *reserves* the units — the customer has PAYMENT_WINDOW_HOURS to pay, and
+// until then the goods are off the shelf but still counted as in stock. COD deducts immediately,
+// because that order is final and the parcel is packed straight away.
+//
+// Prices come from the database, never from the request. A client that posts its own totals is
+// either out of date or lying, and there is no way to tell which.
+const createOrder = asyncHandler(async (req, res) => {
+  const { paymentMethod, shippingAddress, note } = req.body;
+
+  const cart = await prisma.cart.findUnique({
+    where: { userId_brandSlug: { userId: req.user.id, brandSlug: req.brand.slug } },
+    include: { items: { include: { variant: { include: { product: true } } } } },
+  });
+
+  if (!cart || cart.items.length === 0) {
+    throw new ApiError(422, 'CART_EMPTY', 'Giỏ hàng đang trống');
+  }
+
+  const unavailable = cart.items.find((i) => i.variant.product.status !== PRODUCT_STATUS.ACTIVE);
+  if (unavailable) {
+    throw new ApiError(409, 'PRODUCT_UNAVAILABLE', `Sản phẩm "${unavailable.variant.product.name}" hiện không bán`);
+  }
+
+  // Claim stock in a fixed order (by variant id) so two orders containing the same products always
+  // lock rows in the same sequence. Without this, order A holding variant 1 while order B holds
+  // variant 2 — each waiting for the other — is a deadlock the database can only resolve by killing
+  // one of them.
+  const items = [...cart.items].sort((a, b) => (a.variantId < b.variantId ? -1 : 1));
+
+  const isCod = paymentMethod === PAYMENT_METHOD.COD;
+
+  const order = await prisma.$transaction(
+    async (tx) => {
+      for (const item of items) {
+        // The availability check lives inside the UPDATE rather than in a separate SELECT. Reading
+        // the stock first and deciding afterwards leaves a gap in which another request can do the
+        // same thing, and both then write — which is exactly how a shop sells one vase twice. Here
+        // the database evaluates the condition while holding the row lock, so of two concurrent
+        // requests for the last unit, one updates a row and the other updates none.
+        const claimed = isCod
+          ? await tx.$executeRaw`
+              UPDATE "ProductVariant"
+              SET "stockQuantity" = "stockQuantity" - ${item.quantity}
+              WHERE "id" = ${item.variantId}
+                AND "stockQuantity" - "reservedQuantity" >= ${item.quantity}`
+          : await tx.$executeRaw`
+              UPDATE "ProductVariant"
+              SET "reservedQuantity" = "reservedQuantity" + ${item.quantity}
+              WHERE "id" = ${item.variantId}
+                AND "stockQuantity" - "reservedQuantity" >= ${item.quantity}`;
+
+        if (claimed !== 1) {
+          throw new ApiError(
+            409,
+            'OUT_OF_STOCK',
+            `Sản phẩm "${item.variant.product.name}" không đủ hàng`
+          );
+        }
+      }
+
+      const subtotal = items.reduce((sum, i) => sum + i.variant.price * i.quantity, 0);
+      const shippingFee = SHIPPING_FEE_NOT_CALCULATED;
+
+      const created = await tx.order.create({
+        data: {
+          code: generateOrderCode(),
+          userId: req.user.id,
+          brandSlug: req.brand.slug,
+          orderStatus: isCod ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING_PAYMENT,
+          paymentMethod,
+          paymentStatus: isCod ? PAYMENT_STATUS.UNPAID : PAYMENT_STATUS.PENDING,
+          subtotal,
+          shippingFee,
+          grandTotal: subtotal + shippingFee,
+          shippingAddress,
+          note: note || null,
+          // A COD order is already final, so it never expires. A bank transfer holds stock, so it
+          // must have a deadline or the reservation would sit there forever.
+          expiresAt: isCod ? null : new Date(Date.now() + PAYMENT_WINDOW_HOURS * 3600 * 1000),
+          items: {
+            create: items.map((i) => ({
+              variantId: i.variantId,
+              // Snapshots, not references. A year from now the product may be renamed, repriced or
+              // deleted; this order must still show what was actually bought and for how much.
+              productName: i.variant.product.name,
+              sku: i.variant.sku,
+              unitPrice: i.variant.price,
+              quantity: i.quantity,
+              lineTotal: i.variant.price * i.quantity,
+            })),
+          },
+        },
+        include: { items: true },
+      });
+
+      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+      return created;
+    },
+    { timeout: 15000 }
+  );
+
+  sendSuccess(res, order, null, 201);
+});
+
+// Lists the caller's own orders, newest first. The `userId` filter is not a convenience — it is the
+// access control. Without it any logged-in customer could page through every order in the shop.
+const listMyOrders = asyncHandler(async (req, res) => {
+  const { page = '1', pageSize = '10' } = req.query;
+  const take = Math.min(Number(pageSize) || 10, 50);
+  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+
+  const where = { userId: req.user.id, brandSlug: req.brand.slug };
+
+  const [items, total] = await Promise.all([
+    prisma.order.findMany({ where, orderBy: { createdAt: 'desc' }, include: { items: true }, skip, take }),
+    prisma.order.count({ where }),
+  ]);
+
+  sendSuccess(res, items, { page: Number(page), pageSize: take, total });
+});
+
+// Fetches one of the caller's orders by its code. The lookup filters on `userId` as well as `code`,
+// so knowing or guessing somebody else's code is not enough to read their order — the commonest
+// form of broken access control in a shop, and the reason order codes have a random tail too.
+const getMyOrder = asyncHandler(async (req, res) => {
+  const order = await prisma.order.findFirst({
+    where: { code: req.params.code, userId: req.user.id },
+    include: { items: true },
+  });
+  if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
+  sendSuccess(res, order);
+});
+
+// Admin listing across all customers for one brand, filterable by order and payment status. This is
+// the screen the shop works from every morning to see which transfers have arrived.
+const adminList = asyncHandler(async (req, res) => {
+  const { page = '1', pageSize = '20', orderStatus, paymentStatus } = req.query;
+  const take = Math.min(Number(pageSize) || 20, 100);
+  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+
+  const where = { brandSlug: req.brand.slug };
+  if (orderStatus) where.orderStatus = orderStatus;
+  if (paymentStatus) where.paymentStatus = paymentStatus;
+
+  const [items, total] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: { items: true, user: { select: { id: true, email: true, fullName: true } } },
+      skip,
+      take,
+    }),
+    prisma.order.count({ where }),
+  ]);
+
+  sendSuccess(res, items, { page: Number(page), pageSize: take, total });
+});
+
+// Marks a bank-transfer order as paid once the shop has seen the money arrive, converting the held
+// units into a real deduction: `reservedQuantity` goes down and `stockQuantity` goes down with it.
+// Until now the goods were only set aside; this is the moment they actually leave the shelf.
+//
+// This is the exact seam where VNPay will plug in later. The gateway's webhook will call this same
+// logic instead of an admin pressing a button — which is why the bank-transfer flow was built first
+// rather than starting with COD.
+const confirmPayment = asyncHandler(async (req, res) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { items: true },
+  });
+  if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
+
+  if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+    throw new ApiError(409, 'ALREADY_PAID', 'Đơn hàng đã được thanh toán');
+  }
+  assertTransition(order.orderStatus, ORDER_STATUS.CONFIRMED);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    for (const item of order.items) {
+      if (!item.variantId) continue; // variant đã bị xoá; snapshot vẫn giữ nguyên thông tin đơn
+      await tx.$executeRaw`
+        UPDATE "ProductVariant"
+        SET "stockQuantity" = "stockQuantity" - ${item.quantity},
+            "reservedQuantity" = "reservedQuantity" - ${item.quantity}
+        WHERE "id" = ${item.variantId}`;
+    }
+
+    return tx.order.update({
+      where: { id: order.id },
+      data: {
+        orderStatus: ORDER_STATUS.CONFIRMED,
+        paymentStatus: PAYMENT_STATUS.PAID,
+        paidAt: new Date(),
+        expiresAt: null,
+      },
+      include: { items: true },
+    });
+  });
+
+  sendSuccess(res, updated);
+});
+
+// Cancels an order and puts its stock back. Which counter to restore depends on where the order got
+// to: an unpaid order was only holding units, so the reservation is released; a confirmed order had
+// already been deducted, so the units return to `stockQuantity`. Getting this backwards is how a
+// shop ends up with phantom inventory it cannot sell, or with stock it does not physically have.
+const cancelOrder = asyncHandler(async (req, res) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { items: true },
+  });
+  if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
+
+  assertTransition(order.orderStatus, ORDER_STATUS.CANCELLED);
+
+  const wasHoldingReservation = order.orderStatus === ORDER_STATUS.PENDING_PAYMENT;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    for (const item of order.items) {
+      if (!item.variantId) continue;
+      await (wasHoldingReservation
+        ? tx.$executeRaw`
+            UPDATE "ProductVariant"
+            SET "reservedQuantity" = "reservedQuantity" - ${item.quantity}
+            WHERE "id" = ${item.variantId}`
+        : tx.$executeRaw`
+            UPDATE "ProductVariant"
+            SET "stockQuantity" = "stockQuantity" + ${item.quantity}
+            WHERE "id" = ${item.variantId}`);
+    }
+
+    return tx.order.update({
+      where: { id: order.id },
+      data: { orderStatus: ORDER_STATUS.CANCELLED, expiresAt: null },
+      include: { items: true },
+    });
+  });
+
+  sendSuccess(res, updated);
+});
+
+module.exports = { createOrder, listMyOrders, getMyOrder, adminList, confirmPayment, cancelOrder };

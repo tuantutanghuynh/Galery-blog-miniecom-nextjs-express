@@ -3,20 +3,23 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/lib/useAuth';
 
 const navLinks = [
   { name: 'Trang chủ', path: '/' },
   // { name: 'Nghệ thuật', path: '/art' },
   // { name: 'Xưởng sản xuất', path: '/workshop' },
+  { name: 'Sản phẩm', path: '/san-pham' },
   { name: 'Bộ sưu tập', path: '/gallery' },
   // { name: 'Dự án', path: '/projects' },
   { name: 'Tin tức', path: '/blog' },
-  // { name: 'Về chúng tôi', path: '/about' },
+  { name: 'Về chúng tôi', path: '/about' },
   { name: 'Liên hệ', path: '/contact' },
 ];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <nav className="relative z-50 bg-gomsu-background flex items-center justify-between px-6 py-5 border-b border-gomsu-border">
@@ -56,6 +59,28 @@ export default function Navbar() {
           <span>/</span>
           <span className="hover:text-gomsu-primary cursor-pointer transition-colors">EN</span>
         </div>
+
+        {/* Auth buttons */}
+        {user ? (
+          <div className="hidden md:flex items-center gap-4">
+            <span className="text-xs text-gomsu-text-muted">{user.fullName || user.email}</span>
+            <button
+              onClick={logout}
+              className="text-xs uppercase tracking-widest text-gomsu-primary hover:text-gomsu-text transition-colors"
+            >
+              Thoát
+            </button>
+          </div>
+        ) : (
+          <div className="hidden md:flex items-center gap-3">
+            <Link href="/auth/login" className="text-xs uppercase tracking-widest text-gomsu-text-muted hover:text-gomsu-primary transition-colors">
+              Đăng nhập
+            </Link>
+            <Link href="/auth/register" className="text-xs uppercase tracking-widest border border-gomsu-primary text-gomsu-primary px-3 py-1.5 hover:bg-gomsu-primary hover:text-black transition-colors">
+              Đăng ký
+            </Link>
+          </div>
+        )}
 
         {/* Hamburger Icon — chỉ hiện trên mobile/tablet (lg:hidden) */}
         <button
