@@ -33,6 +33,11 @@ router.post(
   ctrl.refresh
 );
 
+// Không đặt sau `authenticate`: access token chỉ sống 15 phút, mà người dùng vẫn phải đăng
+// xuất được sau khi nó hết hạn. Thiếu refreshToken cũng không coi là lỗi — client đã xoá
+// token phía nó rồi, gọi lại lần nữa vẫn phải thành công.
+router.post('/logout', ctrl.logout);
+
 router.get('/me', authenticate, ctrl.me);
 
 router.post(

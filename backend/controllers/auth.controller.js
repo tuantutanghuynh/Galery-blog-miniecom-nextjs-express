@@ -54,11 +54,6 @@ const refresh = asyncHandler(async (req, res) => {
   const accessToken = signAccessToken({ sub: user.id, role: user.role });
   sendSuccess(res, { accessToken, refreshToken: rotated.rawToken });
 });
-  if (!user) throw new ApiError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
-  const accessToken = signAccessToken({ sub: user.id, role: user.role });
-  const newRefreshToken = signRefreshToken({ sub: user.id });
-  sendSuccess(res, { accessToken, refreshToken: newRefreshToken });
-});
 
 const me = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
