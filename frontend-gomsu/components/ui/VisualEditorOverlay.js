@@ -1,37 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getToken, authFetch } from '@/lib/adminAuth';
+import { authFetch } from '@/lib/adminAuth';
+import { useAuth } from '@/lib/useAuth';
 
 export default function VisualEditorOverlay({ settingKey }) {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-
-    // Silent check to verify if token is actually valid and user is admin
-    // We don't use authFetch here because we don't want to redirect public users to /admin/login if token is expired
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data?.data?.role === 'admin') {
-          setIsAdmin(true);
-        } else {
-          // It's a customer token or invalid token, ignore
-          setIsAdmin(false);
-        }
-      })
-      .catch(() => {
-        setIsAdmin(false);
-      });
-  }, []);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -67,7 +45,7 @@ export default function VisualEditorOverlay({ settingKey }) {
     }
   };
 
-  if (!isAdmin) return null;
+  if (user?.role !== 'admin') return null;
 
   return (
     <div className="absolute top-4 right-4 z-50 opacity-0 group-hover:opacity-100 transition-opacity">

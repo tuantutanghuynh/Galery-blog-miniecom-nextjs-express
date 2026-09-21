@@ -33,7 +33,7 @@ export function clearTokens() {
 // gọi authFetch() đang chờ refresh đều dùng chung 1 Promise, không bắn nhiều request.
 let refreshPromise = null;
 
-async function refreshAccessToken() {
+export async function refreshAccessToken() {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       const refreshToken = getRefreshToken();

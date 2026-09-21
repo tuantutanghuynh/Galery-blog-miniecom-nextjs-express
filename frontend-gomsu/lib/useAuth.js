@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getToken, setTokens, clearTokens, refreshAccessToken } from '@/lib/adminAuth';
 
 const AuthContext = createContext();
 
@@ -19,29 +20,31 @@ export function AuthProvider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('miniecom_access_token');
-    if (!token) {
-      setIsLoading(false);
-      return;
+    async function fetchMe(token) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
     }
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data) {
-          setUser(d.data);
-        } else {
-          localStorage.removeItem('miniecom_access_token');
-          localStorage.removeItem('miniecom_refresh_token');
-        }
-      })
-      .catch(() => {
-        localStorage.removeItem('miniecom_access_token');
-        localStorage.removeItem('miniecom_refresh_token');
-      })
-      .finally(() => setIsLoading(false));
+    // Access token chỉ sống 15 phút, còn refresh token sống 7 ngày. Hết hạn access token
+    // thì phải đổi lấy cái mới rồi thử lại — nếu xoá token ngay ở đây thì cứ 15 phút một
+    // lần người dùng bị đăng xuất oan dù phiên vẫn còn hiệu lực.
+    async function restoreSession() {
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        let json = await fetchMe(token);
+        if (!json.data) json = await fetchMe(await refreshAccessToken());
+        if (!json.data) throw new Error('Phiên đăng nhập không còn hiệu lực');
+        setUser(json.data);
+      } catch {
+        clearTokens();
+      }
+    }
+
+    restoreSession().finally(() => setIsLoading(false));
   }, []);
 
   async function login(email, password) {
@@ -53,8 +56,7 @@ export function AuthProvider({ children }) {
     const json = await res.json();
     if (!json.data) throw new Error(readError(json, 'Đăng nhập thất bại'));
 
-    localStorage.setItem('miniecom_access_token', json.data.accessToken);
-    localStorage.setItem('miniecom_refresh_token', json.data.refreshToken);
+    setTokens(json.data.accessToken, json.data.refreshToken);
     setUser(json.data.user);
     return json.data;
   }
@@ -68,15 +70,13 @@ export function AuthProvider({ children }) {
     const json = await res.json();
     if (!json.data) throw new Error(readError(json, 'Đăng ký thất bại'));
 
-    localStorage.setItem('miniecom_access_token', json.data.accessToken);
-    localStorage.setItem('miniecom_refresh_token', json.data.refreshToken);
+    setTokens(json.data.accessToken, json.data.refreshToken);
     setUser(json.data.user);
     return json.data;
   }
 
   function logout() {
-    localStorage.removeItem('miniecom_access_token');
-    localStorage.removeItem('miniecom_refresh_token');
+    clearTokens();
     setUser(null);
     router.push('/');
   }
