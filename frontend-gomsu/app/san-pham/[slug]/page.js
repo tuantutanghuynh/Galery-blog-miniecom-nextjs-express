@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
 import ProductPurchasePanel from '@/components/product/ProductPurchasePanel';
+import ProductStory from '@/components/product/ProductStory';
+import ProductSpecifications from '@/components/product/ProductSpecifications';
 
 // Lấy một sản phẩm theo slug, trả về null nếu không có thay vì để lỗi bắn lên. Trang gọi hàm
 // này ở hai nơi (generateMetadata và component), nên nó phải chịu được việc sản phẩm không
@@ -217,6 +219,10 @@ export default async function ProductDetailPage({ params }) {
           </p>
         </div>
       </div>
+
+      {/* Hai khối này chạy hết chiều ngang nên đặt ngoài lưới hai cột ở trên. */}
+      <ProductStory product={product} />
+      <ProductSpecifications product={product} />
     </article>
   );
 }
