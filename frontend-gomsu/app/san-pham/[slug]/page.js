@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
-
-const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
 // Lấy một sản phẩm theo slug, trả về null nếu không có thay vì để lỗi bắn lên. Trang gọi hàm
 // này ở hai nơi (generateMetadata và component), nên nó phải chịu được việc sản phẩm không

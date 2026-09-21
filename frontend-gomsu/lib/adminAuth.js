@@ -1,5 +1,7 @@
 'use client';
 
+import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
+
 const ACCESS_KEY = 'miniecom_access_token';
 const REFRESH_KEY = 'miniecom_refresh_token';
 
@@ -58,10 +60,11 @@ export async function refreshAccessToken() {
 
 export async function authFetch(path, options = {}) {
   const token = getToken();
-  
+
   const isFormData = typeof window !== 'undefined' && options.body instanceof FormData;
   const customHeaders = {
     Authorization: `Bearer ${token}`,
+    'X-Brand-Slug': BRAND_CATEGORY_SLUG,
     ...options.headers,
   };
 

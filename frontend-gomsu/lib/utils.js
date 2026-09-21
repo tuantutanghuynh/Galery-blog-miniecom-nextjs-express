@@ -5,3 +5,7 @@ export function getImageUrl(url) {
   }
   return `${process.env.NEXT_PUBLIC_BACKEND_ORIGIN}${url}`;
 }
+
+export function formatPrice(v) {
+  return v.toLocaleString('vi-VN') + 'đ';
+}
