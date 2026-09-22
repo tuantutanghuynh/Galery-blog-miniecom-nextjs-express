@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./bin/www",
-    "dev": "nodemon ./bin/www",
+    "dev": "nodemon --watch . --ext ts,js --exec tsx ./bin/www",
+    "typecheck": "tsc --noEmit",
     "db:push": "DATABASE_URL=$(grep '^DIRECT_URL' .env | cut -d '\"' -f2) prisma db push",
     "db:diff": "DATABASE_URL=$(grep '^DIRECT_URL' .env | cut -d '\"' -f2) prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script"
   },
@@ -35,7 +36,18 @@
     "streamifier": "^0.1.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^26.6.2",
     "nodemon": "^3.1.14",
-    "prisma": "^7.9.1"
+    "prisma": "^7.9.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }
