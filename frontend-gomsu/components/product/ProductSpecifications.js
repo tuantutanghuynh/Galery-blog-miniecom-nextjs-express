@@ -2,17 +2,23 @@
 
 import { useState } from 'react';
 
-export default function ProductSpecifications({ product }) {
+export default function ProductSpecifications({ product, shopSpecs = {} }) {
   const [activeTab, setActiveTab] = useState('specs');
 
+  // Ba dòng đầu lấy thẳng từ sản phẩm. Ba dòng sau là thông tin chung của xưởng, lấy từ
+  // Cài đặt để chủ shop tự sửa — trước đây chúng viết cứng trong code, nghĩa là mọi sản phẩm
+  // đều mang cùng một tuyên bố về chất liệu và độ an toàn dù người bán chưa từng xác nhận.
+  // Để trống ô nào trong Cài đặt thì dòng đó tự biến mất, không hiện dòng rỗng.
   const specs = [
     { label: 'Tên tác phẩm', value: product.name },
-    { label: 'Danh mục', value: product.category?.name || 'Gốm nghệ thuật' },
+    { label: 'Danh mục', value: product.category?.name },
+    // Giữ tên thương hiệu làm dự phòng: đây là tên của chính cửa hàng, không phải
+    // tuyên bố về chất liệu hay độ an toàn nên không có rủi ro nói sai.
     { label: 'Thương hiệu', value: product.brand || 'Nghĩa Phái Art & Design' },
-    { label: 'Chất liệu đất', value: 'Đất sét cao lanh Bát Tràng tơ mịn' },
-    { label: 'Chất liệu men', value: 'Men gia truyền nung hỏa biến nhiệt độ cao' },
-    { label: 'Quy chuẩn độc tố', value: 'Đã nung 1300°C loại bỏ hoàn toàn chì & cadium' },
-  ];
+    { label: 'Chất liệu đất', value: shopSpecs.clay },
+    { label: 'Chất liệu men', value: shopSpecs.glaze },
+    { label: 'Quy chuẩn độc tố', value: shopSpecs.safety },
+  ].filter((s) => s.value);
 
   return (
     <section className="border-t border-gomsu-border py-16 px-6 md:px-12 bg-[#111111]">

@@ -49,7 +49,7 @@ export default async function ProductDetailPage({ params }) {
   const { slug } = await params;
   const [product, settings] = await Promise.all([
     getProduct(slug),
-    apiFetch(`/settings?keys=product_story_image`, { cache: 'no-store' })
+    apiFetch('/settings?keys=product_story_image,product_spec_clay,product_spec_glaze,product_spec_safety', { cache: 'no-store' })
       .then((r) => r?.data || {})
       .catch(() => ({})),
   ]);
@@ -201,7 +201,14 @@ export default async function ProductDetailPage({ params }) {
 
       {/* Tầng 2 và 3 chạy hết chiều ngang nên nằm ngoài lưới hai cột ở trên. */}
       <ProductStory product={product} imageUrl={settings.product_story_image || '/images/about/nghia-profile.jpg'} />
-      <ProductSpecifications product={product} />
+      <ProductSpecifications
+        product={product}
+        shopSpecs={{
+          clay: settings.product_spec_clay,
+          glaze: settings.product_spec_glaze,
+          safety: settings.product_spec_safety,
+        }}
+      />
     </article>
   );
 }
