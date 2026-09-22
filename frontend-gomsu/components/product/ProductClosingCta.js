@@ -5,8 +5,8 @@ import Link from 'next/link';
 // rơi ra ngoài là lãng phí.
 export default function ProductClosingCta({ productName }) {
   return (
-    <section className="border-t border-gomsu-border py-20 px-6 text-center">
-      <div className="max-w-xl mx-auto space-y-6">
+    <section className="border-t border-gomsu-border py-20 text-center">
+      <div className="page-shell max-w-2xl space-y-6">
         <p className="text-[10px] uppercase tracking-[0.3em] text-gomsu-primary">Nghĩa Phái</p>
 
         <h2 className="font-serif text-2xl md:text-4xl text-white leading-tight">

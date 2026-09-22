@@ -5,8 +5,8 @@ import VisualEditorOverlay from '@/components/ui/VisualEditorOverlay';
 // (nghệ nhân, xưởng), không phải ảnh riêng của từng món, nên một key settings là đủ.
 export default function ProductStory({ product, imageUrl }) {
   return (
-    <section className="border-t border-gomsu-border py-16 px-6 md:px-12 bg-[#141414]">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <section className="border-t border-gomsu-border py-16 bg-[#141414]">
+      <div className="page-shell grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         {/* Story Text */}
         <div className="space-y-6">
           <div className="inline-block px-3 py-1 bg-gomsu-primary/10 border border-gomsu-primary/30 text-gomsu-primary text-[10px] uppercase tracking-[0.2em] font-medium">

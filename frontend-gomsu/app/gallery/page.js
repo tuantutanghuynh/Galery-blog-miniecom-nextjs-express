@@ -32,7 +32,7 @@ export default async function GalleryPage({ searchParams }) {
 
   return (
     <div>
-      <div className="px-6 py-16 border-b border-gomsu-border">
+      <div className="page-shell py-16 border-b border-gomsu-border">
         <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
           Tác phẩm nổi bật
         </h3>
@@ -41,7 +41,7 @@ export default async function GalleryPage({ searchParams }) {
         </h1>
       </div>
 
-      <div className="flex gap-6 px-6 py-6 border-b border-gomsu-border overflow-x-auto">
+      <div className="page-shell flex gap-6 py-6 border-b border-gomsu-border overflow-x-auto">
         <Link
           href="/gallery"
           className={`text-xs uppercase tracking-widest whitespace-nowrap ${
@@ -63,7 +63,7 @@ export default async function GalleryPage({ searchParams }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="page-shell grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
           <div key={item.id} className="border-r border-b border-gomsu-border aspect-square overflow-hidden group">
             {/* eslint-disable-next-line @next/next/no-img-element */}

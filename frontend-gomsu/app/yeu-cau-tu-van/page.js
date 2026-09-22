@@ -76,7 +76,7 @@ export default function QuoteRequestPage() {
     'w-full bg-transparent border border-gray-600 px-4 py-3 text-sm text-gomsu-text placeholder:text-gray-500 focus:outline-none focus:border-gomsu-primary transition-colors';
 
   return (
-    <div className="min-h-screen max-w-6xl mx-auto px-6 py-12">
+    <div className="min-h-screen page-shell py-12">
       <nav className="text-xs uppercase tracking-widest text-gomsu-text-muted mb-8">
         <Link href="/" className="hover:text-gomsu-primary">Trang chủ</Link>
         <span className="mx-3">/</span>

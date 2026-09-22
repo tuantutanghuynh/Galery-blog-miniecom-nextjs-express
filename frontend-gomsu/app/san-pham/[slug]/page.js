@@ -118,7 +118,8 @@ export default async function ProductDetailPage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
-      <nav className="px-6 py-5 border-b border-gomsu-border text-xs uppercase tracking-widest text-gomsu-text-muted">
+      <nav className="border-b border-gomsu-border text-xs uppercase tracking-widest text-gomsu-text-muted">
+        <div className="page-shell py-5">
         <Link href="/" className="hover:text-gomsu-primary">Trang chủ</Link>
         <span className="mx-3">/</span>
         <Link href="/san-pham" className="hover:text-gomsu-primary">Sản phẩm</Link>
@@ -132,9 +133,10 @@ export default async function ProductDetailPage({ params }) {
         )}
         <span className="mx-3">/</span>
         <span className="text-gomsu-text">{product.name}</span>
+        </div>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-gomsu-border">
+      <div className="page-shell grid grid-cols-1 lg:grid-cols-2 border-b border-gomsu-border">
         <div className="border-r border-gomsu-border">
           <ProductGallery images={product.images} productName={product.name} />
         </div>

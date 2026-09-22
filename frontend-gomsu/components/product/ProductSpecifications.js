@@ -28,8 +28,8 @@ export default function ProductSpecifications({ product, shopSpecs = {} }) {
   ].filter((s) => s.value);
 
   return (
-    <section className="border-t border-gomsu-border py-16 px-6 md:px-12 bg-[#111111]">
-      <div className="max-w-4xl mx-auto">
+    <section className="border-t border-gomsu-border py-16 bg-[#111111]">
+      <div className="page-shell">
         <div className="text-center mb-10">
           <h2 className="font-serif text-2xl md:text-3xl text-white font-medium mb-3">Thông số Kỹ thuật & Bảo quản</h2>
           <p className="text-xs uppercase tracking-widest text-gomsu-text-muted">Cung cấp dữ liệu chi tiết minh bạch cho quyết định mua hàng</p>

@@ -35,7 +35,7 @@ export default async function ProductsPage({ searchParams }) {
 
   return (
     <div>
-      <div className="px-6 py-16 border-b border-gomsu-border">
+      <div className="page-shell py-16 border-b border-gomsu-border">
         <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
           Gốm sứ thủ công Bát Tràng
         </h3>
@@ -43,7 +43,7 @@ export default async function ProductsPage({ searchParams }) {
       </div>
 
       {subCategories.length > 0 && (
-        <div className="flex gap-6 px-6 py-6 border-b border-gomsu-border overflow-x-auto">
+        <div className="page-shell flex gap-6 py-6 border-b border-gomsu-border overflow-x-auto">
           <Link
             href="/san-pham"
             className={`text-xs uppercase tracking-widest whitespace-nowrap ${
@@ -67,14 +67,14 @@ export default async function ProductsPage({ searchParams }) {
       )}
 
       {products.length === 0 ? (
-        <div className="px-6 py-24 text-center">
+        <div className="page-shell py-24 text-center">
           <p className="font-serif text-2xl text-gomsu-text-muted">Chưa có sản phẩm nào được trưng bày.</p>
           <Link href="/contact" className="inline-block mt-6 text-xs uppercase tracking-widest text-gomsu-primary hover:underline">
             Liên hệ để đặt riêng
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="page-shell grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((product) => {
             const prices = product.variants.map((v) => v.price);
             const available = product.variants.reduce((sum, v) => sum + (v.stockQuantity - v.reservedQuantity), 0);

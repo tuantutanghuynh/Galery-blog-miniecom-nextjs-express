@@ -1,7 +1,7 @@
 export default function ContactSection() {
   return (
     <section className="px-6 py-20 lg:py-32 border-b border-gomsu-border bg-[#0a0a0a]">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8">
+      <div className="page-shell grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8">
         
         {/* Cột 1: Thông điệp chính (Chiếm 5/12) */}
         <div className="md:col-span-5 flex flex-col justify-between">
