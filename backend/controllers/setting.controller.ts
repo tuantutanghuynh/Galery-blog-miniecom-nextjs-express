@@ -6,6 +6,10 @@ const { sendSuccess } = require('../utils/ApiResponse');
 
 // Lấy danh sách các cài đặt. Public endpoint để frontend load trang chủ
 const getSettings = asyncHandler(async (req: Request, res: Response) => {
+  // Express khai báo req.query.keys có thể là string | ParsedQs | string[] | ParsedQs[] |
+  // undefined (vì query string có thể lặp key), nên không thể thu hẹp về string mà không ép
+  // kiểu. Giữ nguyên hành vi cũ: nếu keys thực sự là mảng, .split() bên dưới vẫn ném lỗi y như
+  // code JavaScript gốc — ép kiểu ở đây không thêm hay bớt một nhánh xử lý nào.
   const rawKeys = req.query.keys as string | undefined;
   const keys = rawKeys ? rawKeys.split(',') : [];
 

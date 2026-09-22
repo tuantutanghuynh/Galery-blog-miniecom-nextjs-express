@@ -29,6 +29,10 @@ function uploadBufferToCloudinary(buffer: Buffer): Promise<UploadApiResponse> {
       { folder: 'miniecom-gomsu' },
       (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
         if (error) return reject(error);
+        // Kiểu của Cloudinary khai báo result là optional, nhưng code JavaScript gốc không hề
+        // kiểm tra null trước khi resolve — nó luôn resolve thẳng với bất cứ gì nhận được. Thêm
+        // guard runtime ở đây sẽ là một nhánh xử lý mới (đổi hành vi), nên ép kiểu thay vì kiểm
+        // tra thêm.
         resolve(result as UploadApiResponse);
       }
     );
