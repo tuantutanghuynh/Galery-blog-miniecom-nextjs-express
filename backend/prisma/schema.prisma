@@ -44,6 +44,7 @@ model CategoryAttribute {
   isFilterable    Boolean  @default(true)
   options         Json?
   validationRules Json?
+  @@index([categoryId])
 }
 
 model Product {
@@ -60,6 +61,7 @@ model Product {
   updatedAt   DateTime         @updatedAt
   variants    ProductVariant[]
   images      ProductImage[]
+  @@index([categoryId])
 }
 
 model ProductVariant {
@@ -87,6 +89,7 @@ model ProductImage {
   url       String
   altText   String?
   position  Int     @default(0)
+  @@index([productId])
 }
 
 model RefreshToken {
@@ -118,6 +121,8 @@ model BlogPost {
   publishedAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  @@index([authorId])
+  @@index([categoryId])
 }
 
 model GalleryItem {
@@ -129,6 +134,7 @@ model GalleryItem {
   category   Category? @relation(fields: [categoryId], references: [id])
   position   Int       @default(0)
   createdAt  DateTime  @default(now())
+  @@index([categoryId])
 }
 
 model ContactMessage {
@@ -164,6 +170,7 @@ model CartItem {
   createdAt DateTime       @default(now())
 
   @@unique([cartId, variantId])
+  @@index([variantId])
 }
 
 model Order {
@@ -207,6 +214,8 @@ model OrderItem {
   unitPrice   Int
   quantity    Int
   lineTotal   Int
+  @@index([orderId])
+  @@index([variantId])
 }
 
 // Yêu cầu tư vấn mua hàng. Khách chọn sản phẩm rồi để lại thông tin, nhân viên gọi lại và
