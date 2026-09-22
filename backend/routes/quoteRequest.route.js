@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const authenticate = require('../middlewares/authenticate');
+const optionalAuthenticate = require('../middlewares/optionalAuthenticate');
 const requireRole = require('../middlewares/requireRole');
 const resolveBrand = require('../middlewares/resolveBrand');
 const ctrl = require('../controllers/quoteRequest.controller');
@@ -21,7 +22,10 @@ const submitLimiter = rateLimit({
   },
 });
 
-router.post('/', submitLimiter, ctrl.submit);
+router.post('/', submitLimiter, optionalAuthenticate, ctrl.submit);
+
+// Đơn của chính mình — bắt buộc đăng nhập, khác đường gửi ở trên.
+router.get('/mine', authenticate, ctrl.listMine);
 
 router.use('/admin', authenticate, requireRole('admin'));
 router.get('/admin/list', ctrl.adminList);

@@ -17,6 +17,7 @@ model User {
   carts                Cart[]
   orders               Order[]
   passwordResetTokens  PasswordResetToken[]
+  quoteRequests        QuoteRequest[]
 }
 
 model Category {
@@ -220,6 +221,14 @@ model OrderItem {
 model QuoteRequest {
   id           String   @id @default(uuid())
   brandSlug    String
+
+  // Gắn vào tài khoản KHI khách tình cờ đang đăng nhập, và chỉ khi đó. Luồng này cố ý không
+  // bắt đăng nhập — bắt buộc tài khoản là dựng một bức tường ngay trước lúc khách sắp để lại
+  // số điện thoại, mà tài khoản cũng không cung cấp thêm gì so với họ tên/SĐT/địa chỉ đã thu
+  // trong form. Có userId thì khách xem lại được đơn trong trang cá nhân; không có thì nhân
+  // viên vẫn gọi bình thường.
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   customerName String
   phone        String
   email        String?
@@ -242,6 +251,8 @@ model QuoteRequest {
   @@index([brandSlug, status, createdAt])
   // Phục vụ thống kê doanh thu theo khoảng thời gian.
   @@index([brandSlug, closedAt])
+  // Phục vụ màn "đơn của tôi" trong trang cá nhân.
+  @@index([userId, createdAt])
 }
 
 // Bảng cấu hình lưu trữ các thiết lập động cho giao diện trang web (CMS)

@@ -1,6 +1,10 @@
 node_modules
 # Keep environment variables out of version control
+# Dùng mẫu .env* để bắt cả các bản sao như .env.backup, .env.local — một lần sao lưu
+# nhanh rồi `git add -A` là đủ đẩy toàn bộ khoá bí mật lên repo công khai.
 .env
+.env.*
+!.env.example
 
 /generated/prisma
 public/uploads/*
