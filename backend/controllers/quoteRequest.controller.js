@@ -83,6 +83,9 @@ const submit = asyncHandler(async (req, res) => {
   const created = await prisma.quoteRequest.create({
     data: {
       brandSlug: req.brand.slug,
+      // Gắn tài khoản nếu khách tình cờ đang đăng nhập. Không có thì để trống — luồng này
+      // không bắt đăng nhập, xem ghi chú ở model QuoteRequest.
+      userId: req.user?.id || null,
       customerName: customerName.trim(),
       phone: phone.trim(),
       email: email?.trim() || null,
@@ -95,6 +98,22 @@ const submit = asyncHandler(async (req, res) => {
   // Chỉ trả về id và mốc thời gian. Trang cảm ơn không cần đọc lại gì, và đây là endpoint công
   // khai nên trả ít nhất có thể.
   sendSuccess(res, { id: created.id, createdAt: created.createdAt }, null, 201);
+});
+
+// Danh sách yêu cầu của chính người đang đăng nhập, cho trang cá nhân.
+//
+// Lọc theo userId chứ không theo số điện thoại: tra bằng số điện thoại thì ai biết số của
+// người khác là đọc được họ tên và địa chỉ của họ.
+const listMine = asyncHandler(async (req, res) => {
+  const rows = await prisma.quoteRequest.findMany({
+    where: { userId: req.user.id, brandSlug: req.brand.slug },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+
+  // Không trả finalAmount: đó là con số nhân viên chốt nội bộ, có thể khác giá khách thấy
+  // và chưa chắc đã thống nhất với khách.
+  sendSuccess(res, rows.map(({ finalAmount, ...rest }) => rest));
 });
 
 // Danh sách cho nhân viên, mới nhất trước. Lọc theo brand để khi storefront thứ hai chạy thì
@@ -221,4 +240,4 @@ const remove = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xoá yêu cầu.' });
 });
 
-module.exports = { submit, adminList, updateStatus, stats, remove, QUOTE_STATUS };
+module.exports = { submit, listMine, adminList, updateStatus, stats, remove, QUOTE_STATUS };

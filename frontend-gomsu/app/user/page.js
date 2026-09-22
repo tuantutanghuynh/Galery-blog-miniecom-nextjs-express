@@ -1,46 +1,136 @@
 'use client';
 
-import { useAuth } from '@/lib/useAuth';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useAuth } from '@/lib/useAuth';
+import { authFetch } from '@/lib/adminAuth';
+import { getImageUrl, formatPrice } from '@/lib/utils';
+
+const STATUS = {
+  NEW: { label: 'Chờ tư vấn', className: 'border-amber-500/40 text-amber-400' },
+  CONTACTED: { label: 'Đã liên hệ', className: 'border-blue-500/40 text-blue-400' },
+  CLOSED: { label: 'Đã chốt', className: 'border-emerald-500/40 text-emerald-400' },
+};
 
 export default function UserDashboard() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
 
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/auth/login');
-    }
+    if (!isLoading && !user) router.push('/auth/login?redirect=/user');
   }, [isLoading, user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    authFetch('/quote-requests/mine')
+      .then((res) => setOrders(res.data || []))
+      .catch(() => setOrders([]))
+      .finally(() => setLoadingOrders(false));
+  }, [user]);
 
   if (isLoading || !user) {
     return <div className="min-h-screen flex items-center justify-center">Đang tải...</div>;
   }
 
+  const total = (items) => items.reduce((sum, i) => sum + i.lineTotal, 0);
+
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12 min-h-screen">
-      <h1 className="text-3xl font-serif text-gomsu-primary mb-8">Xin chào, {user.fullName || user.email}</h1>
-      
-      <div className="bg-[#1a1a1a] border border-[#333] p-8 space-y-6">
-        <div>
-          <h2 className="text-sm uppercase tracking-widest text-gray-400 mb-2">Thông tin tài khoản</h2>
-          <p className="text-lg">{user.fullName}</p>
-          <p className="text-gray-500">{user.email}</p>
-          <p className="text-xs text-gomsu-primary uppercase tracking-widest mt-2 bg-white/5 inline-block px-2 py-1">
-            Vai trò: {user.role}
-          </p>
+    <div className="page-shell py-12 min-h-screen">
+      <h1 className="font-serif text-3xl md:text-4xl text-gomsu-primary mb-10">
+        Xin chào, {user.fullName || user.email}
+      </h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 order-2 lg:order-1">
+          <h2 className="text-xs uppercase tracking-widest text-gomsu-text-muted mb-4">
+            Yêu cầu tư vấn của bạn
+          </h2>
+
+          {loadingOrders ? (
+            <p className="text-sm text-gomsu-text-muted">Đang tải...</p>
+          ) : orders.length === 0 ? (
+            <div className="border border-gomsu-border p-8 text-center space-y-3">
+              <p className="text-sm text-gomsu-text-muted">Bạn chưa gửi yêu cầu tư vấn nào.</p>
+              {/* Yêu cầu gửi lúc chưa đăng nhập không gắn được vào tài khoản, nên phải nói
+                  trước để khách khỏi tưởng đơn của mình bị mất. */}
+              <p className="text-xs text-gomsu-text-muted">
+                Yêu cầu gửi khi chưa đăng nhập sẽ không hiện ở đây, nhưng nhân viên vẫn nhận
+                được và sẽ gọi lại theo số điện thoại bạn để lại.
+              </p>
+              <Link href="/san-pham" className="inline-block text-sm text-gomsu-primary hover:underline pt-2">
+                Xem sản phẩm
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {orders.map((o) => {
+                const st = STATUS[o.status] || { label: o.status, className: 'border-gomsu-border text-gomsu-text-muted' };
+                return (
+                  <div key={o.id} className="border border-gomsu-border p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <span className="text-xs text-gomsu-text-muted">
+                        {new Date(o.createdAt).toLocaleString('vi-VN')}
+                      </span>
+                      <span className={`text-[10px] uppercase tracking-widest border px-2.5 py-1 ${st.className}`}>
+                        {st.label}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {o.items.map((item, idx) => (
+                        <div key={idx} className="flex gap-3 items-center">
+                          {item.imageUrl && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={getImageUrl(item.imageUrl)} alt={item.productName} className="w-14 h-14 object-cover shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <Link href={`/san-pham/${item.productSlug}`} className="text-sm hover:text-gomsu-primary">
+                              {item.productName}
+                            </Link>
+                            <p className="text-xs text-gomsu-text-muted">{item.variantLabel} × {item.quantity}</p>
+                          </div>
+                          <span className="text-sm text-gomsu-primary shrink-0">{formatPrice(item.lineTotal)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-baseline border-t border-gomsu-border mt-4 pt-3">
+                      <span className="text-xs uppercase tracking-widest text-gomsu-text-muted">Tạm tính</span>
+                      <span className="font-serif text-lg text-gomsu-primary">{formatPrice(total(o.items))}</span>
+                    </div>
+                    <p className="text-xs text-gomsu-text-muted mt-1">Chưa gồm phí vận chuyển.</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        <div className="pt-6 border-t border-[#333]">
-          <h2 className="text-sm uppercase tracking-widest text-gray-400 mb-4">Quản lý</h2>
-          <p className="text-gray-500 text-sm mb-6">Các tính năng Lịch sử đơn hàng, Đổi mật khẩu sẽ được cập nhật sớm.</p>
-          <button 
-            onClick={logout}
-            className="border border-red-900/50 text-red-500 hover:bg-red-950/30 px-6 py-3 uppercase tracking-widest text-xs transition-colors"
-          >
-            Đăng xuất
-          </button>
+        <div className="order-1 lg:order-2">
+          <h2 className="text-xs uppercase tracking-widest text-gomsu-text-muted mb-4">Tài khoản</h2>
+          <div className="border border-gomsu-border p-5 space-y-4">
+            <div>
+              <p className="text-base">{user.fullName}</p>
+              <p className="text-sm text-gomsu-text-muted">{user.email}</p>
+            </div>
+
+            {user.role === 'admin' && (
+              <Link href="/admin/quote-requests" className="block text-sm text-gomsu-primary hover:underline">
+                Vào trang quản trị &rarr;
+              </Link>
+            )}
+
+            <button
+              onClick={logout}
+              className="w-full border border-gomsu-border text-gomsu-text-muted hover:border-red-500/50 hover:text-red-400 px-6 py-3 uppercase tracking-widest text-xs transition-colors"
+            >
+              Đăng xuất
+            </button>
+          </div>
         </div>
       </div>
     </div>

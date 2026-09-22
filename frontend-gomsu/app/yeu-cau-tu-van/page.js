@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuoteList } from '@/lib/useQuoteList';
 import { apiFetch } from '@/lib/apiClient';
 import { getImageUrl, formatPrice } from '@/lib/utils';
+import { getToken } from '@/lib/adminAuth';
 
 
 export default function QuoteRequestPage() {
@@ -23,9 +24,16 @@ export default function QuoteRequestPage() {
     setStatus({ busy: true, error: '', sent: false });
 
     try {
+      // Kèm token nếu khách đang đăng nhập, để đơn gắn vào tài khoản và họ xem lại được
+      // trong trang cá nhân. Không đăng nhập thì vẫn gửi bình thường — đây không phải rào cản.
+      const token = getToken();
+
       await apiFetch('/quote-requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           ...form,
           website_url: website,
