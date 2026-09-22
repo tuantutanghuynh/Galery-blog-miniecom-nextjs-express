@@ -1,9 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
+import ProductGallery from '@/components/product/ProductGallery';
+import ProductPurchasePanel from '@/components/product/ProductPurchasePanel';
+import ProductStory from '@/components/product/ProductStory';
+import ProductSpecifications from '@/components/product/ProductSpecifications';
+import ProductClosingCta from '@/components/product/ProductClosingCta';
 
-const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
 // Lấy một sản phẩm theo slug, trả về null nếu không có thay vì để lỗi bắn lên. Trang gọi hàm
 // này ở hai nơi (generateMetadata và component), nên nó phải chịu được việc sản phẩm không
@@ -45,17 +49,20 @@ export async function generateMetadata({ params }) {
 
 export default async function ProductDetailPage({ params }) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const [product, settings] = await Promise.all([
+    getProduct(slug),
+    apiFetch('/settings?keys=product_story_image,product_spec_clay,product_spec_glaze,product_spec_safety', { cache: 'no-store' })
+      .then((r) => r?.data || {})
+      .catch(() => ({})),
+  ]);
 
   // Sản phẩm nháp hoặc ngừng bán cũng rơi vào đây, vì API trả 404 cho chúng — người ngoài
   // không đoán được là sản phẩm có tồn tại hay không.
   if (!product) notFound();
 
   const prices = product.variants.map((v) => v.price);
-  const singlePrice = prices.length > 0 && Math.min(...prices) === Math.max(...prices);
   const available = product.variants.reduce((sum, v) => sum + (v.stockQuantity - v.reservedQuantity), 0);
   const inStock = available > 0;
-  const cover = product.images[0];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
   // Dữ liệu có cấu trúc cho Google và các công cụ AI. Giá và tình trạng hàng ở đây phải khớp
@@ -70,6 +77,10 @@ export default async function ProductDetailPage({ params }) {
     sku: product.variants[0]?.sku,
     brand: { '@type': 'Brand', name: 'Nghĩa Phái' },
     category: product.category?.name,
+    // Chỉ khai khi chủ shop đã điền trong Cài đặt. Khai bừa một chất liệu không đúng vào
+    // dữ liệu có cấu trúc còn tệ hơn bỏ trống: Google đối chiếu với nội dung hiển thị, lệch
+    // nhau là bỏ qua cả khối markup.
+    material: [settings.product_spec_clay, settings.product_spec_glaze].filter(Boolean).join(', ') || undefined,
     offers:
       prices.length > 1
         ? {
@@ -95,7 +106,10 @@ export default async function ProductDetailPage({ params }) {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: siteUrl || '/' },
       { '@type': 'ListItem', position: 2, name: 'Sản phẩm', item: `${siteUrl}/san-pham` },
-      { '@type': 'ListItem', position: 3, name: product.name },
+      ...(product.category
+        ? [{ '@type': 'ListItem', position: 3, name: product.category.name, item: `${siteUrl}/san-pham?category=${product.category.slug}` }]
+        : []),
+      { '@type': 'ListItem', position: product.category ? 4 : 3, name: product.name },
     ],
   };
 
@@ -104,35 +118,27 @@ export default async function ProductDetailPage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
-      <nav className="px-6 py-5 border-b border-gomsu-border text-xs uppercase tracking-widest text-gomsu-text-muted">
+      <nav className="border-b border-gomsu-border text-xs uppercase tracking-widest text-gomsu-text-muted">
+        <div className="page-shell py-5">
         <Link href="/" className="hover:text-gomsu-primary">Trang chủ</Link>
         <span className="mx-3">/</span>
         <Link href="/san-pham" className="hover:text-gomsu-primary">Sản phẩm</Link>
+        {product.category && (
+          <>
+            <span className="mx-3">/</span>
+            <Link href={`/san-pham?category=${product.category.slug}`} className="hover:text-gomsu-primary">
+              {product.category.name}
+            </Link>
+          </>
+        )}
+        <span className="mx-3">/</span>
+        <span className="text-gomsu-text">{product.name}</span>
+        </div>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-gomsu-border">
+      <div className="page-shell grid grid-cols-1 lg:grid-cols-2 border-b border-gomsu-border">
         <div className="border-r border-gomsu-border">
-          <div className="aspect-square overflow-hidden bg-black/20">
-            {cover ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={getImageUrl(cover.url)} alt={cover.altText || product.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs uppercase tracking-widest text-gomsu-text-muted">
-                Chưa có ảnh
-              </div>
-            )}
-          </div>
-
-          {product.images.length > 1 && (
-            <div className="grid grid-cols-4">
-              {product.images.slice(1).map((img) => (
-                <div key={img.id} className="aspect-square overflow-hidden border-r border-t border-gomsu-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getImageUrl(img.url)} alt={img.altText || product.name} className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
+          <ProductGallery images={product.images} productName={product.name} />
         </div>
 
         <div className="p-8 lg:p-12 flex flex-col gap-8">
@@ -145,27 +151,6 @@ export default async function ProductDetailPage({ params }) {
             <h1 className="font-serif text-3xl md:text-5xl font-medium leading-tight">{product.name}</h1>
           </div>
 
-          <div className="flex items-baseline gap-4">
-            <span className="font-serif text-3xl text-gomsu-primary">
-              {prices.length === 0
-                ? 'Liên hệ'
-                : Math.min(...prices) === Math.max(...prices)
-                  ? formatPrice(prices[0])
-                  : `từ ${formatPrice(Math.min(...prices))}`}
-            </span>
-            {/* Chỉ gạch ngang giá gốc khi sản phẩm có đúng một mức giá. Với sản phẩm nhiều
-                biến thể, trang hiện "từ <giá thấp nhất>" — đặt giá gốc của một biến thể khác
-                cạnh đó sẽ khiến khách tưởng bản rẻ nhất đang được giảm từ con số ấy. */}
-            {singlePrice && product.variants[0].compareAtPrice > product.variants[0].price && (
-              <span className="text-gomsu-text-muted line-through text-lg">
-                {formatPrice(product.variants[0].compareAtPrice)}
-              </span>
-            )}
-          </div>
-
-          <p className={`text-xs uppercase tracking-widest ${inStock ? 'text-gomsu-primary' : 'text-gomsu-text-muted'}`}>
-            {inStock ? `Còn hàng — ${available} sản phẩm` : 'Tạm hết hàng'}
-          </p>
 
           {product.description && (
             <div className="text-gomsu-text-muted leading-relaxed whitespace-pre-line">{product.description}</div>
@@ -209,21 +194,23 @@ export default async function ProductDetailPage({ params }) {
             </div>
           )}
 
-          {/* Chưa có giỏ hàng nên đây là đường đặt hàng thật, không phải nút giả. Khi phần
-              giỏ hàng xong sẽ thay bằng nút thêm vào giỏ. */}
-          <div className="flex flex-col gap-3 pt-4">
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 border border-gomsu-primary/50 text-gomsu-primary hover:bg-gomsu-primary hover:text-black transition-colors uppercase text-xs tracking-widest"
-            >
-              Liên hệ đặt hàng <span>&rarr;</span>
-            </Link>
-            <p className="text-xs text-gomsu-text-muted text-center">
-              Mỗi sản phẩm được tạo hình thủ công, chúng tôi sẽ tư vấn và đóng gói riêng cho bạn.
-            </p>
-          </div>
+          <ProductPurchasePanel product={product} />
         </div>
       </div>
+
+      {/* Hai khối này chạy hết chiều ngang nên nằm ngoài lưới hai cột ở trên. Thông số đặt
+          trước câu chuyện: khách đang cân nhắc mua cần số liệu trước, phần kể chuyện là để
+          thuyết phục thêm sau khi đã xem dữ liệu. */}
+      <ProductSpecifications
+        product={product}
+        shopSpecs={{
+          clay: settings.product_spec_clay,
+          glaze: settings.product_spec_glaze,
+          safety: settings.product_spec_safety,
+        }}
+      />
+      <ProductStory product={product} imageUrl={settings.product_story_image || '/images/about/nghia-profile.jpg'} />
+      <ProductClosingCta productName={product.name} />
     </article>
   );
 }

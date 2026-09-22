@@ -25,7 +25,7 @@ export default async function BlogListPage() {
 
   return (
     <div>
-      <div className="px-6 py-16 border-b border-gomsu-border">
+      <div className="page-shell py-16 border-b border-gomsu-border">
         <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
           Tin tức &amp; Câu chuyện
         </h3>
@@ -34,7 +34,7 @@ export default async function BlogListPage() {
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="page-shell grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => (
           <article
             key={post.id}

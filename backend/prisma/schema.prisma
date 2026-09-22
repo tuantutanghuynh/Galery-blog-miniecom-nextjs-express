@@ -208,6 +208,42 @@ model OrderItem {
   lineTotal   Int
 }
 
+// Yêu cầu tư vấn mua hàng. Khách chọn sản phẩm rồi để lại thông tin, nhân viên gọi lại và
+// chốt đơn thủ công qua điện thoại/chat — không có thanh toán online, không trừ kho, không
+// giữ hàng. Đây là luồng bán hàng thật đang chạy; phần giỏ hàng + thanh toán tự động nằm ở
+// nhánh feature/ecommerce-cart và chưa đưa vào production.
+//
+// `items` để dạng JSON thay vì bảng con vì nó là bản chụp tại thời điểm khách hỏi, phục vụ
+// cho một cuộc gọi — không bao giờ cần truy vấn ngược "sản phẩm X đã được ai hỏi".
+// `email` cho phép rỗng: khách Việt thường chỉ để số điện thoại, bắt buộc email sẽ làm mất
+// khách thật. Số điện thoại mới là kênh liên lạc chính nên nó bắt buộc.
+model QuoteRequest {
+  id           String   @id @default(uuid())
+  brandSlug    String
+  customerName String
+  phone        String
+  email        String?
+  address      String
+  note         String?
+  items        Json
+  status       String   @default("NEW")
+
+  // Số tiền chốt thật và thời điểm chốt, nhân viên nhập khi bấm "Đã chốt".
+  //
+  // Phải là trường riêng chứ không tính lại từ `items`: giá trong `items` là giá khách xem
+  // trên web, còn nhân viên gọi điện thì mặc cả, cộng phí ship, giảm cho khách quen — con số
+  // cuối cùng gần như luôn khác. Thống kê doanh thu dựng trên `items` sẽ sai ngay từ ngày đầu.
+  finalAmount  Int?
+  closedAt     DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([brandSlug, status, createdAt])
+  // Phục vụ thống kê doanh thu theo khoảng thời gian.
+  @@index([brandSlug, closedAt])
+}
+
 // Bảng cấu hình lưu trữ các thiết lập động cho giao diện trang web (CMS)
 // key: homepage_hero_image, homepage_artist_image, v.v.
 model SiteSetting {

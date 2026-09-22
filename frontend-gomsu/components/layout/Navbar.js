@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/lib/useAuth';
+import { useQuoteList } from '@/lib/useQuoteList';
 
 const navLinks = [
   { name: 'Trang chủ', path: '/' },
@@ -20,9 +21,11 @@ const navLinks = [
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { count } = useQuoteList();
 
   return (
-    <nav className="relative z-50 bg-gomsu-background flex items-center justify-between px-6 py-5 border-b border-gomsu-border">
+    <nav className="relative z-50 bg-gomsu-background border-b border-gomsu-border">
+      <div className="page-shell flex items-center justify-between py-5">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
         <Image
@@ -59,6 +62,19 @@ export default function Navbar() {
           <span>/</span>
           <span className="hover:text-gomsu-primary cursor-pointer transition-colors">EN</span>
         </div>
+
+        {/* Danh sách tư vấn — hiện cho cả khách chưa đăng nhập, vì luồng này không cần tài khoản */}
+        {count > 0 && (
+          <Link
+            href="/yeu-cau-tu-van"
+            className="relative text-xs uppercase tracking-widest text-gomsu-primary hover:text-white transition-colors whitespace-nowrap"
+          >
+            Yêu cầu tư vấn
+            <span className="absolute -top-2 -right-4 bg-gomsu-primary text-black rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">
+              {count}
+            </span>
+          </Link>
+        )}
 
         {/* Auth buttons */}
         {user ? (
@@ -109,6 +125,8 @@ export default function Navbar() {
             }`}
           ></span>
         </button>
+      </div>
+
       </div>
 
       {/* Mobile menu overlay */}

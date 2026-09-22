@@ -17,7 +17,7 @@ export default async function ContactPage() {
 
   return (
     <div className="min-h-screen bg-gomsu-background flex items-center justify-center">
-      <div className="max-w-7xl mx-auto px-6 py-20 w-full">
+      <div className="page-shell py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
           {/* Cột trái: Hình ảnh nghệ thuật với viền mờ */}

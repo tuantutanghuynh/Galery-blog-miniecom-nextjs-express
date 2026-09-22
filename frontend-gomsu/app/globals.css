@@ -46,3 +46,24 @@ body {
 }
 
 
+
+/* Bề ngang chuẩn cho mọi khối nội dung.
+
+   Trước đây mỗi khối tự chọn một mức riêng — 7xl, 6xl, 4xl, xl, md — còn navbar, trang chủ,
+   lưới sản phẩm thì không giới hạn gì cả. Ở zoom 100% trên laptop thì không ai thấy, nhưng
+   khi người dùng zoom out dưới 100% thì viewport rộng gấp rưỡi tới gấp đôi: khối không giới
+   hạn giãn hết cỡ, khối bị giới hạn đứng yên giữa màn hình, và trang vỡ thành những mảng
+   rộng hẹp so le nhau.
+
+   Gom về một biến để mọi khối giãn cùng nhịp và sau này đổi chỉ sửa một dòng. 90rem
+   (1440px) khớp bề ngang laptop phổ biến nên ở zoom 100% trang vẫn lấp đầy tự nhiên. */
+:root {
+  --page-max: 90rem;
+}
+
+.page-shell {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}

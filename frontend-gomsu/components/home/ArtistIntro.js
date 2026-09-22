@@ -9,8 +9,8 @@ const STATS = [
 
 export default function ArtistIntro({ imageUrl }) {
   return (
-    <section className="px-6 py-20 border-b border-gomsu-border">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
+    <section className="py-20 border-b border-gomsu-border">
+      <div className="page-shell grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
         {/* Left: Artist Portrait */}
         <div className="relative group w-full aspect-[4/5] md:aspect-[3/4]">
           <VisualEditorOverlay settingKey="homepage_artist" />

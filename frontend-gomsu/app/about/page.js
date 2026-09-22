@@ -49,7 +49,7 @@ export default async function AboutPage() {
       </div>
 
       {/* Thông tin cơ bản */}
-      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-12 -mt-12 relative z-20">
+      <div className="page-shell grid grid-cols-1 md:grid-cols-12 gap-12 -mt-12 relative z-20">
         
         <div className="md:col-span-5 relative">
           <div className="sticky top-32">

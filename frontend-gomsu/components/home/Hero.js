@@ -20,7 +20,7 @@ export default function Hero({ imageUrl }) {
       <div className="absolute inset-0 bg-black/30 pointer-events-none"></div>
 
       {/* Nội dung Text */}
-      <div className="relative z-10 px-6 w-full max-w-7xl mx-auto pointer-events-none">
+      <div className="relative z-10 page-shell pointer-events-none">
         <h3 className="font-sans font-bold text-xs uppercase tracking-[0.2em] text-gomsu-primary brightness-125 drop-shadow-md mb-6">
           Bát Tràng Art Atelier
         </h3>

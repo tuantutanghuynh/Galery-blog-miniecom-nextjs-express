@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/useAuth';
 
 const NAV_ITEMS = [
+  { name: 'Yêu cầu tư vấn', path: '/admin/quote-requests' },
   { name: 'Sản phẩm', path: '/admin/products' },
   { name: 'Bài viết', path: '/admin/posts' },
   { name: 'Gallery', path: '/admin/gallery' },
