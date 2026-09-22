@@ -1,3 +1,5 @@
+import type { Request, Response, NextFunction } from 'express';
+
 const ApiError = require('../utils/ApiError');
 const { verifyAccessToken } = require('../services/jwt.service');
 
@@ -11,7 +13,7 @@ const { verifyAccessToken } = require('../services/jwt.service');
 // The 401 also matters to the frontend: `authFetch` treats exactly that status as "access
 // token expired" and silently refreshes, so returning 403 here would break auto-refresh.
 // `payload.sub` holds the user id because that is the registered JWT claim for subject.
-function authenticate(req, res, next) {
+function authenticate(req: Request, res: Response, next: NextFunction) {
     const header = req.headers.authorization || '';
     const [scheme, token] = header.split(' ');
 
@@ -20,7 +22,7 @@ function authenticate(req, res, next) {
     }
 
     try {
-        const payload = verifyAccessToken(token);
+        const payload = verifyAccessToken(token) as { sub: string; role: string };
         req.user = { id: payload.sub, role: payload.role };
         next();
     } catch {

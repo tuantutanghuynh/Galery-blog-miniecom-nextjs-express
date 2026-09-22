@@ -1,3 +1,5 @@
+import type { Request, Response, NextFunction } from 'express';
+
 const { validationResult } = require('express-validator');
 const ApiError = require('../utils/ApiError');
 
@@ -11,7 +13,7 @@ const ApiError = require('../utils/ApiError');
 // calls `next`. Rules alone do not reject anything — they only record results — so leaving
 // this middleware out means invalid data silently reaches the controller and usually
 // surfaces much later as a confusing Prisma error instead of a clean 422.
-function validate(req, res, next) {
+function validate(req: Request, res: Response, next: NextFunction) {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {

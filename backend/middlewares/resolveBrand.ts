@@ -1,3 +1,5 @@
+import type { Request, Response, NextFunction } from 'express';
+
 const prisma = require('../services/prisma');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
@@ -13,7 +15,7 @@ const asyncHandler = require('../utils/asyncHandler');
 // when a customer complains. A missing header fails loudly on the very first request instead.
 // The resolved `categoryIds` covers the brand root plus its children, which is what ownership
 // checks compare a product against.
-const resolveBrand = asyncHandler(async (req, res, next) => {
+const resolveBrand = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const slug = req.get('X-Brand-Slug');
   if (!slug) {
     throw new ApiError(400, 'BRAND_REQUIRED', 'Thiếu header X-Brand-Slug');
@@ -28,7 +30,7 @@ const resolveBrand = asyncHandler(async (req, res, next) => {
 
   req.brand = {
     slug: category.slug,
-    categoryIds: [category.id, ...children.map((c) => c.id)],
+    categoryIds: [category.id, ...children.map((c: { id: string }) => c.id)],
   };
 
   next();

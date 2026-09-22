@@ -1,3 +1,5 @@
+import type { Request, Response, NextFunction } from 'express';
+
 const ApiError = require('../utils/ApiError');
 
 // The last middleware in the chain and the only place that formats error responses. Every
@@ -11,12 +13,13 @@ const ApiError = require('../utils/ApiError');
 // traces can leak table names, file paths and query structure to an attacker. Express only
 // treats a middleware as an error handler if it declares exactly four parameters, so `next`
 // must stay in the signature even though it is never called.
-module.exports = function errorHandler(err, req, res, next) {
+module.exports = function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
   if (err instanceof ApiError) {
-    return res.status(err.status).json({
+    const apiError = err as { status: number; code: string; message: string; details: unknown };
+    return res.status(apiError.status).json({
       data: null,
       meta: null,
-      error: { code: err.code, message: err.message, details: err.details },
+      error: { code: apiError.code, message: apiError.message, details: apiError.details },
     });
   }
 

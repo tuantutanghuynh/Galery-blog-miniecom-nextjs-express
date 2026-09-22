@@ -1,3 +1,6 @@
+import type { Request } from 'express';
+import type { FileFilterCallback } from 'multer';
+
 const multer = require('multer');
 const ApiError = require('../utils/ApiError');
 
@@ -23,7 +26,7 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: { fileSize: MAX_FILE_SIZE },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     if (!ALLOWED_MIME.includes(file.mimetype)) {
       return cb(new ApiError(422, 'INVALID_FILE_TYPE', 'Chỉ chấp nhận jpeg/png/webp'));
     }
