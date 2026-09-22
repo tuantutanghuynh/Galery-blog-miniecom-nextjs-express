@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/apiClient';
 import ProductPurchasePanel from '@/components/product/ProductPurchasePanel';
 import ProductStory from '@/components/product/ProductStory';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
+import ProductClosingCta from '@/components/product/ProductClosingCta';
 
 
 // Lấy một sản phẩm theo slug, trả về null nếu không có thay vì để lỗi bắn lên. Trang gọi hàm
@@ -106,7 +107,10 @@ export default async function ProductDetailPage({ params }) {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: siteUrl || '/' },
       { '@type': 'ListItem', position: 2, name: 'Sản phẩm', item: `${siteUrl}/san-pham` },
-      { '@type': 'ListItem', position: 3, name: product.name },
+      ...(product.category
+        ? [{ '@type': 'ListItem', position: 3, name: product.category.name, item: `${siteUrl}/san-pham?category=${product.category.slug}` }]
+        : []),
+      { '@type': 'ListItem', position: product.category ? 4 : 3, name: product.name },
     ],
   };
 
@@ -119,6 +123,16 @@ export default async function ProductDetailPage({ params }) {
         <Link href="/" className="hover:text-gomsu-primary">Trang chủ</Link>
         <span className="mx-3">/</span>
         <Link href="/san-pham" className="hover:text-gomsu-primary">Sản phẩm</Link>
+        {product.category && (
+          <>
+            <span className="mx-3">/</span>
+            <Link href={`/san-pham?category=${product.category.slug}`} className="hover:text-gomsu-primary">
+              {product.category.name}
+            </Link>
+          </>
+        )}
+        <span className="mx-3">/</span>
+        <span className="text-gomsu-text">{product.name}</span>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-gomsu-border">
@@ -215,6 +229,7 @@ export default async function ProductDetailPage({ params }) {
         }}
       />
       <ProductStory product={product} imageUrl={settings.product_story_image || '/images/about/nghia-profile.jpg'} />
+      <ProductClosingCta productName={product.name} />
     </article>
   );
 }
