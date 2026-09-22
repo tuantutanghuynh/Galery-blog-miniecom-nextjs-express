@@ -57,7 +57,9 @@ const getBySlug = asyncHandler(async (req, res) => {
   const product = await prisma.product.findUnique({
     where: { slug: req.params.slug },
     include: {
-      category: true,
+      // Kèm định nghĩa thuộc tính để trang sản phẩm biết nhãn hiển thị cho từng khoá
+      // trong cột JSON `attributes`, không phải gọi thêm một request nữa.
+      category: { include: { attributes: { orderBy: { attributeLabel: 'asc' } } } },
       images: { orderBy: { position: 'asc' } },
       variants: { orderBy: { price: 'asc' } },
     },

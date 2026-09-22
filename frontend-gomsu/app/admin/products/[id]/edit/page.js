@@ -3,6 +3,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authFetch } from '@/lib/adminAuth';
+import ProductAttributeFields from '@/components/admin/ProductAttributeFields';
 import { getImageUrl } from '@/lib/utils';
 import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 
@@ -13,7 +14,7 @@ export default function EditProductPage({ params }) {
 
   const [product, setProduct] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({ name: '', slug: '', description: '', status: 'draft', categoryId: '' });
+  const [form, setForm] = useState({ name: '', slug: '', description: '', status: 'draft', categoryId: '', attributes: {} });
   const [variants, setVariants] = useState([]);
   const [images, setImages] = useState([]);
   const [newVariant, setNewVariant] = useState({ sku: '', label: '', price: 0, compareAtPrice: '', stockQuantity: 0 });
@@ -44,6 +45,7 @@ export default function EditProductPage({ params }) {
         description: found.description || '',
         status: found.status,
         categoryId: found.categoryId,
+        attributes: found.attributes || {},
       });
       setVariants(found.variants.map((v) => ({
         id: v.id,
@@ -285,6 +287,18 @@ export default function EditProductPage({ params }) {
               <option value="archived">Ngừng bán</option>
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Thông số kỹ thuật</label>
+          <p className="text-xs text-gray-500 mb-3">
+            Hiện trong bảng thông số ở trang sản phẩm. Ô để trống thì dòng đó không hiện ra.
+          </p>
+          <ProductAttributeFields
+            categoryId={form.categoryId}
+            values={form.attributes}
+            onChange={(attributes) => setForm({ ...form, attributes })}
+          />
         </div>
 
         <div>

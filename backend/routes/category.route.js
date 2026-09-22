@@ -15,4 +15,10 @@ router.post(
   ctrl.create
 );
 
+// Thuộc tính của danh mục: đọc công khai vì trang sản phẩm cần nhãn để vẽ bảng thông số,
+// còn thêm và xoá thì chỉ admin.
+router.get('/:id/attributes', ctrl.listAttributes);
+router.post('/:id/attributes', authenticate, requireRole('admin'), ctrl.createAttribute);
+router.delete('/:id/attributes/:attributeId', authenticate, requireRole('admin'), ctrl.removeAttribute);
+
 module.exports = router;

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import CategoryAttributes from '@/components/admin/CategoryAttributes';
 import { authFetch } from '@/lib/adminAuth';
 import { apiFetch } from '@/lib/apiClient';
 import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
@@ -47,7 +48,7 @@ export default function AdminCategoriesPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <h1 className="text-2xl font-bold mb-1">Danh mục</h1>
       <p className="text-sm text-gray-500 mb-6">
         Thuộc thương hiệu: <strong>{brand?.name || 'Đang tải...'}</strong>
@@ -59,6 +60,7 @@ export default function AdminCategoriesPage() {
             <p className="font-medium">{c.name}</p>
             <p className="text-xs text-gray-500">/{c.slug}</p>
             {c.description && <p className="text-sm text-gray-600 mt-1">{c.description}</p>}
+            <CategoryAttributes categoryId={c.id} />
           </li>
         ))}
         {children.length === 0 && (

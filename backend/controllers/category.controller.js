@@ -37,3 +37,84 @@ const create = asyncHandler(async (req, res) => {
 });
 
 module.exports = { list, create };
+
+// --- Thuộc tính của danh mục ---------------------------------------------------------
+//
+// Mỗi danh mục tự khai những thông số mà sản phẩm trong đó cần có (chiều cao, khối lượng,
+// nhiệt độ nung...). Sản phẩm lưu giá trị vào cột JSON `attributes` theo đúng `attributeKey`
+// ở đây. Tách làm hai tầng như vậy để bảng thông số trên trang sản phẩm là dữ liệu thật của
+// từng món, thay vì một đoạn chữ viết cứng dùng chung cho mọi sản phẩm.
+
+const ATTRIBUTE_TYPES = ['text', 'number'];
+
+// Khoá sinh từ nhãn tiếng Việt: bỏ dấu, thay khoảng trắng bằng gạch dưới. Admin chỉ phải gõ
+// nhãn hiển thị, không phải nghĩ ra khoá kỹ thuật và cũng không gõ sai được.
+function slugifyKey(label) {
+  return label
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+const listAttributes = asyncHandler(async (req, res) => {
+  const rows = await prisma.categoryAttribute.findMany({
+    where: { categoryId: req.params.id },
+    orderBy: { attributeLabel: 'asc' },
+  });
+  sendSuccess(res, rows);
+});
+
+const createAttribute = asyncHandler(async (req, res) => {
+  const { attributeLabel, attributeType = 'text' } = req.body;
+
+  if (!attributeLabel?.trim()) {
+    throw new ApiError(400, 'MISSING_LABEL', 'Vui lòng nhập tên thông số.');
+  }
+  if (!ATTRIBUTE_TYPES.includes(attributeType)) {
+    throw new ApiError(400, 'INVALID_TYPE', 'Kiểu dữ liệu không hợp lệ.');
+  }
+
+  const category = await prisma.category.findUnique({ where: { id: req.params.id } });
+  if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục.');
+
+  const attributeKey = slugifyKey(attributeLabel);
+  if (!attributeKey) {
+    throw new ApiError(400, 'INVALID_LABEL', 'Tên thông số phải có ít nhất một chữ cái hoặc số.');
+  }
+
+  const existing = await prisma.categoryAttribute.findFirst({
+    where: { categoryId: req.params.id, attributeKey },
+  });
+  if (existing) throw new ApiError(409, 'ATTRIBUTE_EXISTS', 'Danh mục đã có thông số này.');
+
+  const created = await prisma.categoryAttribute.create({
+    data: {
+      categoryId: req.params.id,
+      attributeKey,
+      attributeLabel: attributeLabel.trim(),
+      attributeType,
+    },
+  });
+
+  sendSuccess(res, created, null, 201);
+});
+
+// Xoá định nghĩa không đụng tới giá trị đã lưu trong `product.attributes`: giá trị cũ nằm im
+// trong JSON và chỉ thôi được hiển thị. Nếu admin khai lại đúng tên đó thì dữ liệu cũ hiện
+// lại nguyên vẹn, nên một lần bấm nhầm không làm mất số liệu của hàng trăm sản phẩm.
+const removeAttribute = asyncHandler(async (req, res) => {
+  const { count } = await prisma.categoryAttribute.deleteMany({
+    where: { id: req.params.attributeId, categoryId: req.params.id },
+  });
+  if (count === 0) throw new ApiError(404, 'ATTRIBUTE_NOT_FOUND', 'Không tìm thấy thông số.');
+
+  sendSuccess(res, { message: 'Đã xoá thông số.' });
+});
+
+module.exports.listAttributes = listAttributes;
+module.exports.createAttribute = createAttribute;
+module.exports.removeAttribute = removeAttribute;

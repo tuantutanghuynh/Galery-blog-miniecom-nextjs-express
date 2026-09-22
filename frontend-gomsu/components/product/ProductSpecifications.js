@@ -5,16 +5,23 @@ import { useState } from 'react';
 export default function ProductSpecifications({ product, shopSpecs = {} }) {
   const [activeTab, setActiveTab] = useState('specs');
 
-  // Ba dòng đầu lấy thẳng từ sản phẩm. Ba dòng sau là thông tin chung của xưởng, lấy từ
-  // Cài đặt để chủ shop tự sửa — trước đây chúng viết cứng trong code, nghĩa là mọi sản phẩm
-  // đều mang cùng một tuyên bố về chất liệu và độ an toàn dù người bán chưa từng xác nhận.
-  // Để trống ô nào trong Cài đặt thì dòng đó tự biến mất, không hiện dòng rỗng.
+  // Ba nguồn, xếp từ riêng tới chung:
+  //   1. Trường cố định của sản phẩm (tên, danh mục, thương hiệu)
+  //   2. Thông số riêng từng món, lấy từ product.attributes và gắn nhãn theo định nghĩa của
+  //      danh mục — đây mới là chỗ khai chiều cao, khối lượng, nhiệt độ nung của đúng món đó
+  //   3. Thông tin chung của xưởng, lấy từ Cài đặt
+  // Dòng nào không có giá trị thì bị loại, nên bảng không bao giờ hiện ô trống.
+  const perProduct = (product.category?.attributes || [])
+    .map((def) => ({ label: def.attributeLabel, value: product.attributes?.[def.attributeKey] }))
+    .filter((row) => row.value !== undefined && row.value !== null && row.value !== '');
+
   const specs = [
     { label: 'Tên tác phẩm', value: product.name },
     { label: 'Danh mục', value: product.category?.name },
     // Giữ tên thương hiệu làm dự phòng: đây là tên của chính cửa hàng, không phải
     // tuyên bố về chất liệu hay độ an toàn nên không có rủi ro nói sai.
     { label: 'Thương hiệu', value: product.brand || 'Nghĩa Phái Art & Design' },
+    ...perProduct,
     { label: 'Chất liệu đất', value: shopSpecs.clay },
     { label: 'Chất liệu men', value: shopSpecs.glaze },
     { label: 'Quy chuẩn độc tố', value: shopSpecs.safety },
