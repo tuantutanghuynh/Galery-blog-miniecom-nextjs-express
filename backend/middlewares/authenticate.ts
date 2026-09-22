@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-
-const ApiError = require('../utils/ApiError');
-const { verifyAccessToken } = require('../services/jwt.service');
+import ApiError from '../utils/ApiError';
+import { verifyAccessToken } from '../services/jwt.service';
 
 // Gate for every endpoint that requires a logged-in user. It verifies the access token and
 // publishes the caller's identity on `req.user` for the middleware and controllers behind it.
@@ -13,21 +12,21 @@ const { verifyAccessToken } = require('../services/jwt.service');
 // The 401 also matters to the frontend: `authFetch` treats exactly that status as "access
 // token expired" and silently refreshes, so returning 403 here would break auto-refresh.
 // `payload.sub` holds the user id because that is the registered JWT claim for subject.
-function authenticate(req: Request, res: Response, next: NextFunction) {
-    const header = req.headers.authorization || '';
-    const [scheme, token] = header.split(' ');
+export function authenticate(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.authorization || '';
+  const [scheme, token] = header.split(' ');
 
-    if (scheme !== 'Bearer' || !token) {
-        return next(new ApiError(401, 'UNAUTHENTICATED', 'Missing access token'))
-    }
+  if (scheme !== 'Bearer' || !token) {
+    return next(new ApiError(401, 'UNAUTHENTICATED', 'Missing access token'));
+  }
 
-    try {
-        const payload = verifyAccessToken(token) as { sub: string; role: string };
-        req.user = { id: payload.sub, role: payload.role };
-        next();
-    } catch {
-        next(new ApiError(401, 'UNAUTHENTICATED', 'Access token is invalid or expired'))
-    }
+  try {
+    const payload = verifyAccessToken(token) as { sub: string; role: string };
+    req.user = { id: payload.sub, role: payload.role };
+    next();
+  } catch {
+    next(new ApiError(401, 'UNAUTHENTICATED', 'Access token is invalid or expired'));
+  }
 }
 
-module.exports = authenticate;
+export default authenticate;

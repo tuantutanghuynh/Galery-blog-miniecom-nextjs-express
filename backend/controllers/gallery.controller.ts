@@ -1,9 +1,10 @@
-const prisma = require('../services/prisma');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
-const fs = require('fs').promises;
-const path = require('path');
+import type { Request, Response } from 'express';
+import fs from 'fs/promises';
+import path from 'path';
+import prisma from '../services/prisma';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
 
 // CRUD for gallery images. Image files themselves are uploaded separately through
 // upload.controller.js and reach this file as a URL string. Rows created before the move to
@@ -16,19 +17,19 @@ const path = require('path');
 // root category. `pageSize` is capped at 50 to keep a single request from pulling the whole
 // gallery. Ordering by `position` leaves room for manual curation; nothing sets it yet, so
 // in practice every item currently shares position 0 and ties fall back to database order.
-const list = asyncHandler(async (req, res) => {
+export const list = asyncHandler(async (req: Request, res: Response) => {
   const { categorySlug, page = '1', pageSize = '10' } = req.query;
   const take = Math.min(Number(pageSize) || 10, 50);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = {};
-  if (categorySlug) {
+  const where: { categoryId?: { in: string[] } } = {};
+  if (categorySlug && typeof categorySlug === 'string') {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
 
     // Tìm thêm các danh mục con (ví dụ: Bình Gốm, Lọ Hoa...)
     const children = await prisma.category.findMany({ where: { parentId: category.id } });
-    const categoryIds = [category.id, ...children.map(c => c.id)];
+    const categoryIds = [category.id, ...children.map((c) => c.id)];
 
     where.categoryId = { in: categoryIds };
   }
@@ -52,7 +53,7 @@ const list = asyncHandler(async (req, res) => {
 // to deal with nulls. `altText` matters more than it looks: it is the text screen readers
 // announce and the main signal Google Images has about the photo, which is why the admin
 // form marks it required.
-const create = asyncHandler(async (req, res) => {
+export const create = asyncHandler(async (req: Request, res: Response) => {
   const { title, imageUrl, altText, categoryId, position } = req.body;
   const item = await prisma.galleryItem.create({
     data: { title, imageUrl, altText, categoryId: categoryId || null, position: position ?? 0 },
@@ -63,8 +64,9 @@ const create = asyncHandler(async (req, res) => {
 // Fetches a single item by id, used by the admin edit form to prefill its fields. A missing
 // id answers 404. There is no visibility rule to apply here — unlike blog posts, gallery
 // items have no draft state, so anything in the table is live.
-const getById = asyncHandler(async (req, res) => {
-  const item = await prisma.galleryItem.findUnique({ where: { id: req.params.id } });
+export const getById = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const item = await prisma.galleryItem.findUnique({ where: { id } });
   if (!item) throw new ApiError(404, 'GALLERY_ITEM_NOT_FOUND', 'Không tìm thấy ảnh');
   sendSuccess(res, item);
 });
@@ -75,9 +77,10 @@ const getById = asyncHandler(async (req, res) => {
 // orphaned images accumulating; Cloudinary URLs are skipped because they are not ours to
 // unlink here. The deletion is wrapped in try/catch and only logged on failure — a file that
 // is already gone must not abort an otherwise valid update.
-const update = asyncHandler(async (req, res) => {
+export const update = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const { title, imageUrl, altText, categoryId, position } = req.body;
-  const existing = await prisma.galleryItem.findUnique({ where: { id: req.params.id } });
+  const existing = await prisma.galleryItem.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'GALLERY_ITEM_NOT_FOUND', 'Không tìm thấy ảnh');
 
   // Nêu đổi ảnh, xoá ảnh cũ
@@ -92,7 +95,7 @@ const update = asyncHandler(async (req, res) => {
   }
 
   const updated = await prisma.galleryItem.update({
-    where: { id: req.params.id },
+    where: { id },
     data: {
       title: title !== undefined ? title : existing.title,
       imageUrl: imageUrl || existing.imageUrl,
@@ -109,8 +112,9 @@ const update = asyncHandler(async (req, res) => {
 // file — a broken thumbnail. The opposite order would leave an unreferenced file on disk
 // instead. Neither is ideal; this order was chosen because a visible broken image gets
 // noticed and fixed, whereas an orphaned file silently eats storage forever.
-const remove = asyncHandler(async (req, res) => {
-  const existing = await prisma.galleryItem.findUnique({ where: { id: req.params.id } });
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const existing = await prisma.galleryItem.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'GALLERY_ITEM_NOT_FOUND', 'Không tìm thấy ảnh');
 
   // Xoá file vật lý trên ổ cứng nếu imageUrl là đường dẫn cục bộ
@@ -126,9 +130,9 @@ const remove = asyncHandler(async (req, res) => {
   }
 
   // Xoá record trong Database
-  await prisma.galleryItem.delete({ where: { id: req.params.id } });
+  await prisma.galleryItem.delete({ where: { id } });
 
   sendSuccess(res, { message: 'Đã xoá ảnh' });
 });
 
-module.exports = { list, create, getById, update, remove };
+export default { list, create, getById, update, remove };

@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-
-const ApiError = require('../utils/ApiError');
+import ApiError from '../utils/ApiError';
 
 // The last middleware in the chain and the only place that formats error responses. Every
 // failure in the app — thrown by a controller, forwarded by asyncHandler, or raised by
@@ -13,13 +12,12 @@ const ApiError = require('../utils/ApiError');
 // traces can leak table names, file paths and query structure to an attacker. Express only
 // treats a middleware as an error handler if it declares exactly four parameters, so `next`
 // must stay in the signature even though it is never called.
-module.exports = function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
   if (err instanceof ApiError) {
-    const apiError = err as { status: number; code: string; message: string; details: unknown };
-    return res.status(apiError.status).json({
+    return res.status(err.status).json({
       data: null,
       meta: null,
-      error: { code: apiError.code, message: apiError.message, details: apiError.details },
+      error: { code: err.code, message: err.message, details: err.details },
     });
   }
 
@@ -29,4 +27,6 @@ module.exports = function errorHandler(err: unknown, req: Request, res: Response
     meta: null,
     error: { code: 'INTERNAL_ERROR', message: 'Đã có lỗi xảy ra', details: null },
   });
-};
+}
+
+export default errorHandler;

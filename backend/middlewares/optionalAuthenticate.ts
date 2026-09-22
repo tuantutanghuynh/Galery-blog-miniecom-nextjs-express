@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-
-const { verifyAccessToken } = require('../services/jwt.service');
+import { verifyAccessToken } from '../services/jwt.service';
 
 // Nhận diện người dùng NẾU họ tình cờ đang đăng nhập, và không cản ai cả.
 //
@@ -11,7 +10,7 @@ const { verifyAccessToken } = require('../services/jwt.service');
 //
 // Cố ý nuốt lỗi token: một token hết hạn không được phép biến việc gửi yêu cầu thành thất
 // bại, vì khách không hề làm gì sai và họ cũng không cần tài khoản để mua hàng.
-function optionalAuthenticate(req: Request, res: Response, next: NextFunction) {
+export function optionalAuthenticate(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization || '';
   const [scheme, token] = header.split(' ');
 
@@ -27,4 +26,4 @@ function optionalAuthenticate(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-module.exports = optionalAuthenticate;
+export default optionalAuthenticate;

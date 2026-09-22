@@ -1,12 +1,5 @@
-const crypto = require('crypto');
-const prisma = require('./prisma');
-
-// No runtime effect — this file has no `import`/`export` of its own otherwise, which would
-// leave TypeScript treating it as a global script rather than a module. That would put
-// `crypto` and `prisma` in the same scope as every other file doing the same (`crypto`
-// already collides with the ambient DOM-style `crypto` global Node exposes, and `prisma`
-// with services/prisma.ts's own top-level `const`), so this line forces module scope.
-export {};
+import crypto from 'crypto';
+import prisma from './prisma';
 
 // Lifecycle of refresh tokens: issuing, rotating and revoking them. Unlike access tokens,
 // these are stored in the database so a session can actually be killed, and they implement
@@ -28,7 +21,7 @@ function hashToken(rawToken: string): string {
 // the client and can never be recovered from the database afterwards. The value comes from
 // `crypto.randomBytes` rather than a JWT because this token carries no claims; it is just
 // an opaque lookup key, which keeps it short and makes revocation a simple row update.
-async function issueRefreshToken(userId: string): Promise<string> {
+export async function issueRefreshToken(userId: string): Promise<string> {
     const rawToken = crypto.randomBytes(40).toString('hex');
 
     await prisma.refreshToken.create({
@@ -49,7 +42,7 @@ async function issueRefreshToken(userId: string): Promise<string> {
 // that user is revoked immediately and the caller is forced to log in again. A valid token
 // is revoked before a replacement is issued, so each refresh token is usable exactly once
 // and a stolen one stops working as soon as the real user refreshes.
-async function rotateRefreshToken(rawToken: string): Promise<{ userId: string; rawToken: string } | null> {
+export async function rotateRefreshToken(rawToken: string): Promise<{ userId: string; rawToken: string } | null> {
     const tokenHash = hashToken(rawToken);
 
     const record = await prisma.refreshToken.findFirst({
@@ -86,7 +79,7 @@ async function rotateRefreshToken(rawToken: string): Promise<{ userId: string; r
 // revoked token is left untouched — re-stamping the timestamp would erase when the session
 // actually ended. Note it stays silent when no row matches: a logout request carrying a
 // bogus token should not leak whether that token ever existed.
-async function revokeRefreshToken(rawToken: string): Promise<void> {
+export async function revokeRefreshToken(rawToken: string): Promise<void> {
     const tokenHash = hashToken(rawToken);
 
     await prisma.refreshToken.updateMany({
@@ -95,4 +88,4 @@ async function revokeRefreshToken(rawToken: string): Promise<void> {
     });
 }
 
-module.exports = { issueRefreshToken, rotateRefreshToken, revokeRefreshToken }
+export default { issueRefreshToken, rotateRefreshToken, revokeRefreshToken };

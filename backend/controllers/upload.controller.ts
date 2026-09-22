@@ -1,12 +1,11 @@
 import type { Request, Response } from 'express';
 import type { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
-
-const cloudinary = require('cloudinary').v2;
-const streamifier = require('streamifier');
-const config = require('../config/env');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
+import { v2 as cloudinary } from 'cloudinary';
+import streamifier from 'streamifier';
+import config from '../config/env';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
 
 // Handles image uploads for blog cover photos and gallery items. Files arrive from the
 // upload middleware as buffers in memory and are streamed directly to Cloudinary without
@@ -29,10 +28,6 @@ function uploadBufferToCloudinary(buffer: Buffer): Promise<UploadApiResponse> {
       { folder: 'miniecom-gomsu' },
       (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
         if (error) return reject(error);
-        // Kiểu của Cloudinary khai báo result là optional, nhưng code JavaScript gốc không hề
-        // kiểm tra null trước khi resolve — nó luôn resolve thẳng với bất cứ gì nhận được. Thêm
-        // guard runtime ở đây sẽ là một nhánh xử lý mới (đổi hành vi), nên ép kiểu thay vì kiểm
-        // tra thêm.
         resolve(result as UploadApiResponse);
       }
     );
@@ -46,11 +41,11 @@ function uploadBufferToCloudinary(buffer: Buffer): Promise<UploadApiResponse> {
 // guaranteed to exist because the upload middleware filtered it; this function only needs to
 // reject if the file somehow got lost between middleware and here, which would signal a serious
 // pipeline break.
-const uploadImage = asyncHandler(async (req: Request, res: Response) => {
+export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.file) throw new ApiError(422, 'FILE_REQUIRED', 'Thiếu file ảnh');
 
   const result = await uploadBufferToCloudinary(req.file.buffer);
   sendSuccess(res, { url: result.secure_url }, null, 201);
 });
 
-module.exports = { uploadImage };
+export default { uploadImage };

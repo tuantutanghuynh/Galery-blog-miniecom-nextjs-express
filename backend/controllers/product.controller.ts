@@ -1,8 +1,10 @@
-const prisma = require('../services/prisma');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
-const { PRODUCT_STATUS } = require('../constants/product');
+import type { Request, Response } from 'express';
+import type { Prisma } from '@prisma/client';
+import prisma from '../services/prisma';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
+import { PRODUCT_STATUS } from '../constants/product';
 
 // Every read and write path for products, serving both the storefront and the admin dashboard.
 // A product is a catalogue entry; the sellable things with a price and a stock count are its
@@ -15,14 +17,14 @@ const { PRODUCT_STATUS } = require('../constants/product');
 // at 50 so a crafted request cannot pull the whole catalogue in one call. The category filter
 // expands to include child categories, otherwise a product filed under "Bình gốm" would be missing
 // from the parent brand's listing.
-const list = asyncHandler(async (req, res) => {
+export const list = asyncHandler(async (req: Request, res: Response) => {
   const { page = '1', pageSize = '12', categorySlug } = req.query;
   const take = Math.min(Number(pageSize) || 12, 50);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = { status: PRODUCT_STATUS.ACTIVE };
+  const where: Prisma.ProductWhereInput = { status: PRODUCT_STATUS.ACTIVE };
 
-  if (categorySlug) {
+  if (categorySlug && typeof categorySlug === 'string') {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
     const children = await prisma.category.findMany({ where: { parentId: category.id } });
@@ -53,12 +55,11 @@ const list = asyncHandler(async (req, res) => {
 // cannot probe the catalogue to learn that an unreleased product exists at a given URL. Variants
 // come back sorted by price so the storefront can show "từ <giá thấp nhất>" without sorting again,
 // and images by `position` so the admin's chosen order is what visitors see.
-const getBySlug = asyncHandler(async (req, res) => {
+export const getBySlug = asyncHandler(async (req: Request, res: Response) => {
+  const slug = req.params.slug as string;
   const product = await prisma.product.findUnique({
-    where: { slug: req.params.slug },
+    where: { slug },
     include: {
-      // Kèm định nghĩa thuộc tính để trang sản phẩm biết nhãn hiển thị cho từng khoá
-      // trong cột JSON `attributes`, không phải gọi thêm một request nữa.
       category: { include: { attributes: { orderBy: { attributeLabel: 'asc' } } } },
       images: { orderBy: { position: 'asc' } },
       variants: { orderBy: { price: 'asc' } },
@@ -76,16 +77,16 @@ const getBySlug = asyncHandler(async (req, res) => {
 // can find work in progress. It supports a case-insensitive `search` on the name and an optional
 // `status` filter. The `categorySlug` filter matters just as much here as on the public side:
 // leaving it out is what would let one brand's dashboard display the other brand's catalogue.
-const adminList = asyncHandler(async (req, res) => {
+export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const { page = '1', pageSize = '20', status, categorySlug, search } = req.query;
   const take = Math.min(Number(pageSize) || 20, 100);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = {};
-  if (status) where.status = status;
-  if (search) where.name = { contains: search, mode: 'insensitive' };
+  const where: Prisma.ProductWhereInput = {};
+  if (status && typeof status === 'string') where.status = status;
+  if (search && typeof search === 'string') where.name = { contains: search, mode: 'insensitive' };
 
-  if (categorySlug) {
+  if (categorySlug && typeof categorySlug === 'string') {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
     const children = await prisma.category.findMany({ where: { parentId: category.id } });
@@ -117,7 +118,7 @@ const adminList = asyncHandler(async (req, res) => {
 // SKU are checked for collisions before writing so a duplicate returns a clear 409 instead of a raw
 // Prisma constraint error, and `variantKey` falls back to the SKU so the compound unique index on
 // (productId, variantKey) always has a value to work with.
-const create = asyncHandler(async (req, res) => {
+export const create = asyncHandler(async (req: Request, res: Response) => {
   const {
     categoryId,
     name,
@@ -136,7 +137,7 @@ const create = asyncHandler(async (req, res) => {
   const category = await prisma.category.findUnique({ where: { id: categoryId } });
   if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
 
-  const skus = variants.map((v) => v.sku);
+  const skus = variants.map((v: { sku: string }) => v.sku);
   if (new Set(skus).size !== skus.length) {
     throw new ApiError(422, 'DUPLICATE_SKU', 'Các biến thể không được trùng SKU');
   }
@@ -158,7 +159,7 @@ const create = asyncHandler(async (req, res) => {
 
     if (variants.length) {
       await tx.productVariant.createMany({
-        data: variants.map((v) => ({
+        data: variants.map((v: any) => ({
           productId: created.id,
           sku: v.sku,
           price: v.price,
@@ -173,7 +174,7 @@ const create = asyncHandler(async (req, res) => {
 
     if (images.length) {
       await tx.productImage.createMany({
-        data: images.map((img, index) => ({
+        data: images.map((img: any, index: number) => ({
           productId: created.id,
           url: img.url,
           altText: img.altText ?? null,
@@ -202,8 +203,8 @@ const create = asyncHandler(async (req, res) => {
 // itself and always fail. Variants and images are deliberately not editable here: they carry stock
 // and price, and mixing them into a general-purpose update is how a careless request silently
 // wipes inventory. They get their own endpoints later.
-const update = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+export const update = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
 
@@ -219,8 +220,14 @@ const update = asyncHandler(async (req, res) => {
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
   }
 
-  const data = { categoryId, name, slug, description, brand, status, attributes };
-  Object.keys(data).forEach((key) => data[key] === undefined && delete data[key]);
+  const data: Prisma.ProductUpdateInput = {};
+  if (categoryId) data.category = { connect: { id: categoryId } };
+  if (name !== undefined) data.name = name;
+  if (slug !== undefined) data.slug = slug;
+  if (description !== undefined) data.description = description;
+  if (brand !== undefined) data.brand = brand;
+  if (status !== undefined) data.status = status;
+  if (attributes !== undefined) data.attributes = attributes;
 
   const product = await prisma.product.update({
     where: { id },
@@ -238,16 +245,11 @@ const update = asyncHandler(async (req, res) => {
 // Updates one variant's price and stock. This lives apart from `update` on purpose: those fields
 // are the two most dangerous in the catalogue, and keeping them out of the general-purpose product
 // endpoint means a partial form submission can never blank out inventory as a side effect.
-//
-// `stockQuantity` is set to an absolute number rather than adjusted by a delta, because that is
-// what a stock-take gives you — the admin counts twelve vases on the shelf and types twelve. The
-// value is rejected if it would fall below what is already reserved for pending orders, since that
-// would promise customers goods that are spoken for. `reservedQuantity` itself is never editable by
-// hand; it is owned by checkout and the sweeper.
-const updateVariant = asyncHandler(async (req, res) => {
+export const updateVariant = asyncHandler(async (req: Request, res: Response) => {
+  const variantId = req.params.variantId as string;
   const { price, compareAtPrice, stockQuantity, label } = req.body;
 
-  const variant = await prisma.productVariant.findUnique({ where: { id: req.params.variantId } });
+  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
   if (!variant) throw new ApiError(404, 'VARIANT_NOT_FOUND', 'Không tìm thấy biến thể');
 
   if (stockQuantity !== undefined && stockQuantity < variant.reservedQuantity) {
@@ -258,9 +260,14 @@ const updateVariant = asyncHandler(async (req, res) => {
     );
   }
 
-  const data = { price, compareAtPrice, stockQuantity };
-  if (label !== undefined) data.variantAttributes = { ...variant.variantAttributes, label };
-  Object.keys(data).forEach((key) => data[key] === undefined && delete data[key]);
+  const data: Prisma.ProductVariantUpdateInput = {};
+  if (price !== undefined) data.price = price;
+  if (compareAtPrice !== undefined) data.compareAtPrice = compareAtPrice;
+  if (stockQuantity !== undefined) data.stockQuantity = stockQuantity;
+  if (label !== undefined) {
+    const existingAttrs = (variant.variantAttributes as Record<string, any>) || {};
+    data.variantAttributes = { ...existingAttrs, label };
+  }
 
   const updated = await prisma.productVariant.update({ where: { id: variant.id }, data });
   sendSuccess(res, updated);
@@ -270,10 +277,11 @@ const updateVariant = asyncHandler(async (req, res) => {
 // upload.controller.js first and arrives here as a URL, which keeps this endpoint free of any
 // file handling. New images land at the end of the order rather than the front, so adding a photo
 // never silently changes which one is the cover.
-const addImage = asyncHandler(async (req, res) => {
+export const addImage = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const { url, altText } = req.body;
 
-  const product = await prisma.product.findUnique({ where: { id: req.params.id } });
+  const product = await prisma.product.findUnique({ where: { id } });
   if (!product) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
 
   const last = await prisma.productImage.findFirst({
@@ -293,47 +301,35 @@ const addImage = asyncHandler(async (req, res) => {
   sendSuccess(res, image, null, 201);
 });
 
-// Edits an image's alt text or moves it in the order. Alt text matters more than it looks: it is
-// what a screen reader announces and the main signal Google Images has about the photo, which is
-// why it defaults to the product name rather than being left empty.
-//
-// Reordering is expressed as a plain position number. To make an image the cover, the client sends
-// a position lower than every other image's — no reshuffling of the remaining rows is needed,
-// because the listing only ever sorts by this column and gaps in the sequence are harmless.
-const updateImage = asyncHandler(async (req, res) => {
+// Edits an image's alt text or moves it in the order.
+export const updateImage = asyncHandler(async (req: Request, res: Response) => {
+  const imageId = req.params.imageId as string;
   const { altText, position } = req.body;
 
-  const existing = await prisma.productImage.findUnique({ where: { id: req.params.imageId } });
+  const existing = await prisma.productImage.findUnique({ where: { id: imageId } });
   if (!existing) throw new ApiError(404, 'IMAGE_NOT_FOUND', 'Không tìm thấy ảnh');
 
-  const data = { altText, position };
-  Object.keys(data).forEach((key) => data[key] === undefined && delete data[key]);
+  const data: Prisma.ProductImageUpdateInput = {};
+  if (altText !== undefined) data.altText = altText;
+  if (position !== undefined) data.position = position;
 
   const updated = await prisma.productImage.update({ where: { id: existing.id }, data });
   sendSuccess(res, updated);
 });
 
-// Detaches an image from a product. Only the database row is removed — the file stays on
-// Cloudinary, because `ProductImage` stores just the URL and Cloudinary needs a `public_id` to
-// delete anything. Orphaned files therefore accumulate there over time. Fixing it properly means
-// storing `public_id` alongside the URL, which is a schema change and a separate job.
-const removeImage = asyncHandler(async (req, res) => {
-  const existing = await prisma.productImage.findUnique({ where: { id: req.params.imageId } });
+// Detaches an image from a product.
+export const removeImage = asyncHandler(async (req: Request, res: Response) => {
+  const imageId = req.params.imageId as string;
+  const existing = await prisma.productImage.findUnique({ where: { id: imageId } });
   if (!existing) throw new ApiError(404, 'IMAGE_NOT_FOUND', 'Không tìm thấy ảnh');
 
   await prisma.productImage.delete({ where: { id: existing.id } });
   sendSuccess(res, { message: 'Đã xoá ảnh' });
 });
 
-// Permanently deletes a product along with its variants and images. The row is read first purely so
-// a missing id answers with a clean 404 instead of the 500 Prisma raises when `delete` matches
-// nothing. Deleting is destructive in a way archiving is not: any cart holding one of these
-// variants loses that line (the foreign key cascades), so the admin UI should offer
-// `status = 'archived'` as the normal way to retire a product and keep this for genuine mistakes.
-// Past orders survive regardless, because `OrderItem` keeps a snapshot and its variant link is set
-// to null rather than blocking the delete.
-const remove = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+// Permanently deletes a product along with its variants and images.
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
 
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
@@ -347,10 +343,9 @@ const remove = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xoá sản phẩm' });
 });
 
-
 // Adds a new variant to an existing product.
-const addVariant = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+export const addVariant = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const { sku, price, compareAtPrice, stockQuantity, label } = req.body;
 
   const product = await prisma.product.findUnique({ where: { id } });
@@ -376,10 +371,9 @@ const addVariant = asyncHandler(async (req, res) => {
   sendSuccess(res, variant, null, 201);
 });
 
-// Removes a variant. Ensures that at least one variant remains, because a product without
-// variants cannot be bought.
-const removeVariant = asyncHandler(async (req, res) => {
-  const { variantId } = req.params;
+// Removes a variant. Ensures that at least one variant remains.
+export const removeVariant = asyncHandler(async (req: Request, res: Response) => {
+  const variantId = req.params.variantId as string;
 
   const existing = await prisma.productVariant.findUnique({ where: { id: variantId } });
   if (!existing) throw new ApiError(404, 'VARIANT_NOT_FOUND', 'Không tìm thấy biến thể');
@@ -394,7 +388,7 @@ const removeVariant = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xóa biến thể' });
 });
 
-module.exports = {
+export default {
   addVariant,
   removeVariant,
   list,

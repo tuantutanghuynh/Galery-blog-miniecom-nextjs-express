@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-
-const { validationResult } = require('express-validator');
-const ApiError = require('../utils/ApiError');
+import { validationResult } from 'express-validator';
+import ApiError from '../utils/ApiError';
 
 // Bridge between express-validator and this project's error envelope. Route files declare
 // their validation rules inline and end the array with this middleware, which is what stops
@@ -13,7 +12,7 @@ const ApiError = require('../utils/ApiError');
 // calls `next`. Rules alone do not reject anything — they only record results — so leaving
 // this middleware out means invalid data silently reaches the controller and usually
 // surfaces much later as a confusing Prisma error instead of a clean 422.
-function validate(req: Request, res: Response, next: NextFunction) {
+export function validate(req: Request, res: Response, next: NextFunction) {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -25,4 +24,4 @@ function validate(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-module.exports = validate;
+export default validate;

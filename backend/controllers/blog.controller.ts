@@ -1,7 +1,9 @@
-const prisma = require('../services/prisma');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
+import type { Request, Response } from 'express';
+import type { Prisma } from '@prisma/client';
+import prisma from '../services/prisma';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
 
 // Every read and write path for blog posts, serving both the public site and the admin
 // dashboard. Two ideas shape this file: scheduled publishing is derived from `publishedAt`
@@ -15,17 +17,17 @@ const { sendSuccess } = require('../utils/ApiResponse');
 // time comes. `pageSize` is capped at 50 so a crafted request cannot ask for the entire
 // table in one query. The category filter expands to include child categories, otherwise a
 // post filed under "Bình gốm" would vanish from the parent brand's listing.
-const list = asyncHandler(async (req, res) => {
+export const list = asyncHandler(async (req: Request, res: Response) => {
   const { page = '1', pageSize = '10', categorySlug } = req.query;
   const take = Math.min(Number(pageSize) || 10, 50);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = {
+  const where: Prisma.BlogPostWhereInput = {
     status: 'published',
     publishedAt: { lte: new Date() } // Lọc đi các bài được lên lịch trong tương lai
   };
 
-  if (categorySlug) {
+  if (categorySlug && typeof categorySlug === 'string') {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
     const children = await prisma.category.findMany({ where: { parentId: category.id } });
@@ -53,9 +55,10 @@ const list = asyncHandler(async (req, res) => {
 // cannot probe the site to learn that an unpublished article exists at a given URL. The
 // author is selected down to id and name only, keeping the email and password hash off the
 // public response.
-const getBySlug = asyncHandler(async (req, res) => {
+export const getBySlug = asyncHandler(async (req: Request, res: Response) => {
+  const slug = req.params.slug as string;
   const post = await prisma.blogPost.findUnique({
-    where: { slug: req.params.slug },
+    where: { slug },
     include: { category: true, author: { select: { id: true, fullName: true } } },
   });
 
@@ -74,14 +77,14 @@ const getBySlug = asyncHandler(async (req, res) => {
 // how the feature avoids a schema change and a migration of existing rows. The
 // `categorySlug` filter is just as mandatory as on the public side — leaving it out is what
 // once let one brand's dashboard display the other brand's articles.
-const adminList = asyncHandler(async (req, res) => {
+export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const { page = '1', pageSize = '20', status, categorySlug, search } = req.query;
   const take = Math.min(Number(pageSize) || 20, 100);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = {};
+  const where: Prisma.BlogPostWhereInput = {};
 
-  if (search) {
+  if (search && typeof search === 'string') {
     where.title = { contains: search, mode: 'insensitive' };
   }
 
@@ -95,7 +98,7 @@ const adminList = asyncHandler(async (req, res) => {
     where.publishedAt = { gt: new Date() };
   }
 
-  if (categorySlug) {
+  if (categorySlug && typeof categorySlug === 'string') {
     const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
     if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
     const children = await prisma.category.findMany({ where: { parentId: category.id } });
@@ -124,7 +127,8 @@ const adminList = asyncHandler(async (req, res) => {
 // it can never leak through the public visibility check. The author is taken from the
 // verified access token rather than the request body, which prevents attributing an article
 // to somebody else.
-const create = asyncHandler(async (req, res) => {
+export const create = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa đăng nhập');
   const { title, slug, excerpt, content, coverImageUrl, categoryId, seoTitle, seoDescription, status, publishedAt } = req.body;
 
   // Kiểm tra trùng lặp Slug
@@ -136,7 +140,7 @@ const create = asyncHandler(async (req, res) => {
   }
 
   // Xác định ngày xuất bản
-  let finalPublishedAt = null;
+  let finalPublishedAt: Date | null = null;
   if (status === 'published') {
     finalPublishedAt = publishedAt ? new Date(publishedAt) : new Date();
   }
@@ -166,8 +170,8 @@ const create = asyncHandler(async (req, res) => {
 // touching its slug would collide with itself and always fail. The `publishedAt` rules
 // mirror `create`: an explicit date wins, a first-time publish stamps now, and moving back
 // to draft clears the date so the post leaves the public listing.
-const update = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+export const update = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const existing = await prisma.blogPost.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'POST_NOT_FOUND', 'Không tìm thấy bài viết');
 
@@ -181,13 +185,13 @@ const update = asyncHandler(async (req, res) => {
     }
   }
 
-  const data = {
+  const data: Prisma.BlogPostUpdateInput = {
     title,
     slug,
     excerpt,
     content,
     coverImageUrl,
-    categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
+    category: categoryId !== undefined ? (categoryId ? { connect: { id: categoryId } } : { disconnect: true }) : undefined,
     seoTitle,
     seoDescription,
     status
@@ -201,9 +205,6 @@ const update = asyncHandler(async (req, res) => {
     data.publishedAt = null;
   }
 
-  // Loại bỏ các key undefined
-  Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
-
   const post = await prisma.blogPost.update({ where: { id }, data });
   sendSuccess(res, post);
 });
@@ -212,8 +213,8 @@ const update = asyncHandler(async (req, res) => {
 // clean 404 instead of the 500 Prisma raises when `delete` finds nothing to remove. There is
 // no soft delete here: the post is gone, and any search engine holding its URL will start
 // getting 404s, which is the intended behaviour for content pulled on purpose.
-const remove = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
 
   // Phải check tồn tại trước khi xoá để tránh lỗi 500 từ Prisma
   const existing = await prisma.blogPost.findUnique({ where: { id } });
@@ -223,4 +224,4 @@ const remove = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xoá bài viết' });
 });
 
-module.exports = { list, getBySlug, adminList, create, update, remove };
+export default { list, getBySlug, adminList, create, update, remove };

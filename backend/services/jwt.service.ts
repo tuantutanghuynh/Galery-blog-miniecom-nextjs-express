@@ -1,9 +1,7 @@
-import type { JwtPayload, SignOptions } from 'jsonwebtoken';
+import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
+import { jwtAccessSecret, jwtRefreshSecret } from '../config/env';
 
-const jwt = require('jsonwebtoken');
-const { jwtAccessSecret, jwtRefreshSecret } = require('../config/env');
-
-type AccessPayload = { sub: string; role: string };
+export type AccessPayload = { sub: string; role: string };
 
 const ACCESS_TOKEN_TTL: SignOptions['expiresIn'] = '15m';
 const REFRESH_TOKEN_TTL: SignOptions['expiresIn'] = '7d';
@@ -13,7 +11,7 @@ const REFRESH_TOKEN_TTL: SignOptions['expiresIn'] = '7d';
 // issued: a stolen token stays usable until it expires, so the window is kept small and the
 // refresh-token rotation in token.service.js handles long-lived sessions instead. Keeping
 // the role inside the payload lets requireRole authorise a request without a database read.
-function signAccessToken(payload: AccessPayload): string {
+export function signAccessToken(payload: AccessPayload): string {
     if (!jwtAccessSecret) throw new Error('Thiếu JWT_ACCESS_SECRET');
     return jwt.sign(payload, jwtAccessSecret, { expiresIn: ACCESS_TOKEN_TTL });
 }
@@ -23,19 +21,19 @@ function signAccessToken(payload: AccessPayload): string {
 // on failure, and the caller — middlewares/authenticate.js — converts both into the same
 // 401 so the client cannot distinguish an expired token from a forged one. Callers must
 // therefore always wrap this in try/catch rather than checking a return value.
-function verifyAccessToken(token: string): JwtPayload {
+export function verifyAccessToken(token: string): JwtPayload {
     if (!jwtAccessSecret) throw new Error('Thiếu JWT_ACCESS_SECRET');
-    return jwt.verify(token, jwtAccessSecret);
+    return jwt.verify(token, jwtAccessSecret) as JwtPayload;
 }
 
-function signRefreshToken(payload: AccessPayload): string {
+export function signRefreshToken(payload: AccessPayload): string {
     if (!jwtRefreshSecret) throw new Error('Thiếu JWT_REFRESH_SALT');
     return jwt.sign(payload, jwtRefreshSecret, { expiresIn: REFRESH_TOKEN_TTL });
 }
 
-function verifyRefreshToken(token: string): JwtPayload {
+export function verifyRefreshToken(token: string): JwtPayload {
     if (!jwtRefreshSecret) throw new Error('Thiếu JWT_REFRESH_SALT');
-    return jwt.verify(token, jwtRefreshSecret);
+    return jwt.verify(token, jwtRefreshSecret) as JwtPayload;
 }
 
-module.exports = { signAccessToken, verifyAccessToken, signRefreshToken, verifyRefreshToken };
+export default { signAccessToken, verifyAccessToken, signRefreshToken, verifyRefreshToken };

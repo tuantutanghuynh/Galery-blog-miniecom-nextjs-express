@@ -1,11 +1,13 @@
-const router = require('express').Router();
-const { body } = require('express-validator');
-const validate = require('../middlewares/validate');
-const authenticate = require('../middlewares/authenticate');
-const requireRole = require('../middlewares/requireRole');
-const resolveBrand = require('../middlewares/resolveBrand');
-const ctrl = require('../controllers/order.controller');
-const { PAYMENT_METHOD, ORDER_STATUS, PAYMENT_STATUS } = require('../constants/order');
+import { Router } from 'express';
+import { body } from 'express-validator';
+import validate from '../middlewares/validate';
+import authenticate from '../middlewares/authenticate';
+import requireRole from '../middlewares/requireRole';
+import resolveBrand from '../middlewares/resolveBrand';
+import * as ctrl from '../controllers/order.controller';
+import { PAYMENT_METHOD } from '../constants/order';
+
+const router = Router();
 
 // Order routes. Every endpoint needs a logged-in user and a brand; admin endpoints add a role check
 // on top. Note that admin routes are declared before `/:code`, otherwise the literal word "admin"
@@ -37,4 +39,4 @@ router.patch('/admin/:id/cancel', requireRole('admin'), ctrl.cancelOrder);
 
 router.get('/:code', ctrl.getMyOrder);
 
-module.exports = router;
+export default router;

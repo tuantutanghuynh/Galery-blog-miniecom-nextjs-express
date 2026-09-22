@@ -1,9 +1,11 @@
-const router = require('express').Router();
-const { body } = require('express-validator');
-const validate = require('../middlewares/validate');
-const authenticate = require('../middlewares/authenticate');
-const resolveBrand = require('../middlewares/resolveBrand');
-const ctrl = require('../controllers/cart.controller');
+import { Router } from 'express';
+import { body } from 'express-validator';
+import validate from '../middlewares/validate';
+import authenticate from '../middlewares/authenticate';
+import resolveBrand from '../middlewares/resolveBrand';
+import * as ctrl from '../controllers/cart.controller';
+
+const router = Router();
 
 // Cart routes. Every endpoint needs both a logged-in user and a brand, so the two middlewares are
 // applied to the whole router rather than repeated on each line.
@@ -27,4 +29,4 @@ router.patch(
 
 router.delete('/items/:id', ctrl.removeItem);
 
-module.exports = router;
+export default router;

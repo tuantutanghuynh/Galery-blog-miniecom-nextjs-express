@@ -1,14 +1,16 @@
-const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
-const logger = require('morgan');
-const routes = require('./routes');
-const notFound = require('./middlewares/notFound');
-const errorHandler = require('./middlewares/errorHandler');
+import express from 'express';
+import type { Request, Response } from 'express';
+import path from 'path';
+import cors from 'cors';
+import type { CorsOptions } from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
+import logger from 'morgan';
+import routes from './routes';
+import notFound from './middlewares/notFound';
+import errorHandler from './middlewares/errorHandler';
 
 // Assembles the Express application: security layers, body parsing, the API routes and the
 // error handling chain, in that order. Middleware order is the whole point of this file —
@@ -22,7 +24,7 @@ const app = express();
 // address. Without it every request in production looks like it comes from a single IP, so
 // the rate limiters below would count all users into one shared bucket and one busy visitor
 // would lock everybody else out.
-app.set("trust proxy", 1);
+app.set('trust proxy', 1);
 
 // Gzip nén dung lượng API
 app.use(compression());
@@ -30,9 +32,11 @@ app.use(compression());
 // Sets the standard security headers (HSTS, X-Frame-Options, and friends). The default
 // cross-origin resource policy is relaxed to `cross-origin` because the frontend runs on a
 // different origin and would otherwise be blocked from loading files served from `/uploads`.
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // Restricts which origins may call the API, read from `FRONTEND_URLS` as a comma-separated
 // list. A list rather than a single origin is required because one backend serves several
@@ -41,15 +45,15 @@ app.use(helmet({
 // through, since the header is only sent by browsers and blocking them would break tooling.
 const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:3000,http://localhost:3001').split(',');
 
-const corsOptions = {
-    origin: (origin, callback) => {
-        // Allow no origin (Postman, S2S), specific allowed origins, or any Vercel domain
-        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
-            return callback(null, true);
-        }
-        callback(new Error(`Origin ${origin} không được phép bởi CORS`));
-    },
-    credentials: true,
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow no origin (Postman, S2S), specific allowed origins, or any Vercel domain
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    callback(new Error(`Origin ${origin} không được phép bởi CORS`));
+  },
+  credentials: true,
 };
 app.use(cors(corsOptions));
 
@@ -58,11 +62,11 @@ app.use(cors(corsOptions));
 // number alone: `/auth/*` and `/contact` mount their own stricter limiters in their route
 // files, which run in addition to this one.
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per 15 minutes
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: 'Too many requests from this IP, please try again after 15 minutes'
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 
 app.use('/api/', apiLimiter);
@@ -71,14 +75,15 @@ app.use('/api/', apiLimiter);
 // because blog content comes from a rich text editor that can inline images as base64 data
 // URIs; the Express default of 100KB rejected those saves with an opaque 500.
 app.use(logger('dev'));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: false, limit: "10mb" }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 app.use(cookieParser());
 
 // Liveness probe for the hosting platform. It answers before any authentication so an
 // uptime check never needs credentials.
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok' });
+});
 
 // Serves images uploaded before the move to Cloudinary. It has to stay above `notFound`,
 // otherwise the catch-all answers first and every one of these files 404s — which is exactly
@@ -92,4 +97,4 @@ app.use('/api/v1', routes);
 app.use(notFound);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

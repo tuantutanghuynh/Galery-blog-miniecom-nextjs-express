@@ -1,8 +1,7 @@
 import type { Request } from 'express';
 import type { FileFilterCallback } from 'multer';
-
-const multer = require('multer');
-const ApiError = require('../utils/ApiError');
+import multer from 'multer';
+import ApiError from '../utils/ApiError';
 
 // Multer configuration for the single image-upload endpoint. It only receives and screens
 // the file; the actual storage happens in controllers/upload.controller.js, which streams
@@ -23,7 +22,7 @@ const storage = multer.memoryStorage();
 // because the `accept` attribute on the client input is only a hint and is trivial to
 // bypass. A rejected type becomes a 422 ApiError so the failure arrives in the same envelope
 // as every other error rather than as a raw multer exception.
-const upload = multer({
+export const upload = multer({
   storage,
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
@@ -34,4 +33,4 @@ const upload = multer({
   },
 });
 
-module.exports = upload;
+export default upload;

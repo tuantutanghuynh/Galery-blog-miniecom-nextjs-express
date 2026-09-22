@@ -5,12 +5,14 @@
 // Lowercase is deliberate here: BlogPost already stores 'draft' / 'published' and changing that
 // would mean migrating existing rows for no functional gain. Order and payment statuses introduced
 // later use UPPERCASE because they are new tables with no legacy data to match.
-const PRODUCT_STATUS = Object.freeze({
+export const PRODUCT_STATUS = {
   DRAFT: 'draft',
   ACTIVE: 'active',
   ARCHIVED: 'archived',
-} as const);
+} as const;
 
-const PRODUCT_STATUS_VALUES = Object.freeze(Object.values(PRODUCT_STATUS));
+export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];
 
-module.exports = { PRODUCT_STATUS, PRODUCT_STATUS_VALUES };
+export const PRODUCT_STATUS_VALUES = Object.freeze(Object.values(PRODUCT_STATUS));
+
+export default { PRODUCT_STATUS, PRODUCT_STATUS_VALUES };

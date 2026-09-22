@@ -1,9 +1,8 @@
 import type { Request, Response } from 'express';
-
-const prisma = require('../services/prisma');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
+import prisma from '../services/prisma';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
 
 // Read and write access to the Category tree. Categories carry more weight here than the
 // name suggests: each business (Gốm sứ, Petshop) is a root category and its sub-categories
@@ -16,7 +15,7 @@ const { sendSuccess } = require('../utils/ApiResponse');
 // means the list does include the other brand's categories, so any admin UI that offers a
 // category picker has to filter the result before rendering it, or an editor can file
 // content under the wrong business.
-const list = asyncHandler(async (req: Request, res: Response) => {
+export const list = asyncHandler(async (req: Request, res: Response) => {
   const categories = await prisma.category.findMany({ include: { attributes: true } });
   sendSuccess(res, categories);
 });
@@ -26,7 +25,7 @@ const list = asyncHandler(async (req: Request, res: Response) => {
 // omitting it creates a new root, meaning a whole new business. The slug is checked first
 // because it is unique in the schema and it is also the public URL segment, so a duplicate
 // has to fail as a clear 409 rather than as a raw database constraint error.
-const create = asyncHandler(async (req: Request, res: Response) => {
+export const create = asyncHandler(async (req: Request, res: Response) => {
   const { name, slug, description, parentId } = req.body;
 
   const existing = await prisma.category.findUnique({ where: { slug } });
@@ -37,8 +36,6 @@ const create = asyncHandler(async (req: Request, res: Response) => {
   });
   sendSuccess(res, category, null, 201);
 });
-
-module.exports = { list, create };
 
 // --- Thuộc tính của danh mục ---------------------------------------------------------
 //
@@ -62,15 +59,17 @@ function slugifyKey(label: string): string {
     .replace(/^_+|_+$/g, '');
 }
 
-const listAttributes = asyncHandler(async (req: Request, res: Response) => {
+export const listAttributes = asyncHandler(async (req: Request, res: Response) => {
+  const categoryId = req.params.id as string;
   const rows = await prisma.categoryAttribute.findMany({
-    where: { categoryId: req.params.id },
+    where: { categoryId },
     orderBy: { attributeLabel: 'asc' },
   });
   sendSuccess(res, rows);
 });
 
-const createAttribute = asyncHandler(async (req: Request, res: Response) => {
+export const createAttribute = asyncHandler(async (req: Request, res: Response) => {
+  const categoryId = req.params.id as string;
   const { attributeLabel, attributeType = 'text' } = req.body;
 
   if (!attributeLabel?.trim()) {
@@ -80,7 +79,7 @@ const createAttribute = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, 'INVALID_TYPE', 'Kiểu dữ liệu không hợp lệ.');
   }
 
-  const category = await prisma.category.findUnique({ where: { id: req.params.id } });
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
   if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục.');
 
   const attributeKey = slugifyKey(attributeLabel);
@@ -89,13 +88,13 @@ const createAttribute = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const existing = await prisma.categoryAttribute.findFirst({
-    where: { categoryId: req.params.id, attributeKey },
+    where: { categoryId, attributeKey },
   });
   if (existing) throw new ApiError(409, 'ATTRIBUTE_EXISTS', 'Danh mục đã có thông số này.');
 
   const created = await prisma.categoryAttribute.create({
     data: {
-      categoryId: req.params.id,
+      categoryId,
       attributeKey,
       attributeLabel: attributeLabel.trim(),
       attributeType,
@@ -108,15 +107,15 @@ const createAttribute = asyncHandler(async (req: Request, res: Response) => {
 // Xoá định nghĩa không đụng tới giá trị đã lưu trong `product.attributes`: giá trị cũ nằm im
 // trong JSON và chỉ thôi được hiển thị. Nếu admin khai lại đúng tên đó thì dữ liệu cũ hiện
 // lại nguyên vẹn, nên một lần bấm nhầm không làm mất số liệu của hàng trăm sản phẩm.
-const removeAttribute = asyncHandler(async (req: Request, res: Response) => {
+export const removeAttribute = asyncHandler(async (req: Request, res: Response) => {
+  const categoryId = req.params.id as string;
+  const attributeId = req.params.attributeId as string;
   const { count } = await prisma.categoryAttribute.deleteMany({
-    where: { id: req.params.attributeId, categoryId: req.params.id },
+    where: { id: attributeId, categoryId },
   });
   if (count === 0) throw new ApiError(404, 'ATTRIBUTE_NOT_FOUND', 'Không tìm thấy thông số.');
 
   sendSuccess(res, { message: 'Đã xoá thông số.' });
 });
 
-module.exports.listAttributes = listAttributes;
-module.exports.createAttribute = createAttribute;
-module.exports.removeAttribute = removeAttribute;
+export default { list, create, listAttributes, createAttribute, removeAttribute };

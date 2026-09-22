@@ -1,9 +1,8 @@
 import type { Request, Response } from 'express';
-
-const prisma = require('../services/prisma');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
+import prisma from '../services/prisma';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
 
 // Handles the public contact form and the admin inbox that reads it. This is the only place
 // in the API where an anonymous visitor writes to the database, so the submit path carries
@@ -15,7 +14,7 @@ const { sendSuccess } = require('../utils/ApiResponse');
 // would just teach the bot to skip the field next time. Name, email and message are checked
 // here rather than left to express-validator to keep the honeypot short-circuit above them.
 // Nothing is emailed anywhere; messages wait in the database for the admin inbox below.
-const submitContact = asyncHandler(async (req: Request, res: Response) => {
+export const submitContact = asyncHandler(async (req: Request, res: Response) => {
   const { name, email, phone, subject, message, website_url } = req.body;
 
   // Honeypot check (Nếu website_url được điền => Là Bot spam)
@@ -41,7 +40,7 @@ const submitContact = asyncHandler(async (req: Request, res: Response) => {
 // filter" so the UI can offer an "all" option. Unlike blog and gallery, there is no brand
 // filter here — the contact table has no category, so both storefronts would share this
 // inbox if the second one ever goes live.
-const adminList = asyncHandler(async (req: Request, res: Response) => {
+export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const { page = '1', pageSize = '20', isRead } = req.query;
   const take = Math.min(Number(pageSize) || 20, 100);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
@@ -68,8 +67,8 @@ const adminList = asyncHandler(async (req: Request, res: Response) => {
 // first so an unknown id answers 404 instead of the 500 Prisma throws when `update` matches
 // nothing. The flag only ever moves from false to true — there is no "mark as unread" —
 // because the inbox uses it purely to highlight what has not been looked at yet.
-const markAsRead = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const existing = await prisma.contactMessage.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'MESSAGE_NOT_FOUND', 'Không tìm thấy tin nhắn');
 
@@ -84,8 +83,8 @@ const markAsRead = asyncHandler(async (req: Request, res: Response) => {
 // Permanently deletes a message, used to clear spam that slipped past the honeypot. The
 // existence check again exists to turn a stale id into a clean 404. There is no soft delete
 // and no undo, so the admin UI asks for confirmation before calling this.
-const remove = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const existing = await prisma.contactMessage.findUnique({ where: { id } });
   if (!existing) throw new ApiError(404, 'MESSAGE_NOT_FOUND', 'Không tìm thấy tin nhắn');
 
@@ -93,4 +92,4 @@ const remove = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, { message: 'Đã xoá tin nhắn' });
 });
 
-module.exports = { submitContact, adminList, markAsRead, remove };
+export default { submitContact, adminList, markAsRead, remove };

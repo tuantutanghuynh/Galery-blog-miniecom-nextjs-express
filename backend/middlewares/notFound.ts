@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-
-const ApiError = require('../utils/ApiError');
+import ApiError from '../utils/ApiError';
 
 // Catch-all mounted after every real route in app.js. It turns "no route matched" into the
 // same error envelope every other failure uses, instead of Express's default HTML page.
@@ -11,6 +10,8 @@ const ApiError = require('../utils/ApiError');
 // what once made every uploaded image 404 when the static `/uploads` mount sat after it.
 // The requested path is included in the message because a bare "not found" gives no clue
 // which URL the client actually called.
-module.exports = function notFound(req: Request, res: Response, next: NextFunction) {
+export function notFound(req: Request, res: Response, next: NextFunction) {
   next(new ApiError(404, 'NOT_FOUND', `Route ${req.originalUrl} không tồn tại`));
-};
+}
+
+export default notFound;

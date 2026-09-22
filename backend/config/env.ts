@@ -1,4 +1,5 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Single gateway between `.env` and the rest of the backend. Other modules import named
 // values from here instead of reading `process.env` directly, so every secret the app needs
@@ -9,7 +10,7 @@ require('dotenv').config();
 // insecure configuration instead of failing loudly. None of these values may be committed —
 // `.env` is gitignored and `.env.example` documents the shape with dummy values.
 
-interface EnvConfig {
+export interface EnvConfig {
   port: string | number;
   databaseUrl: string | undefined;
   jwtAccessSecret: string | undefined;
@@ -21,16 +22,22 @@ interface EnvConfig {
   };
 }
 
-const config: EnvConfig = {
-  port: process.env.PORT || 4000,
-  databaseUrl: process.env.DATABASE_URL,
-  jwtAccessSecret: process.env.JWT_ACCESS_SECRET,
-  jwtRefreshSecret: process.env.JWT_REFRESH_SALT,
-  cloudinary: {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-    apiKey: process.env.CLOUDINARY_API_KEY,
-    apiSecret: process.env.CLOUDINARY_API_SECRET,
-  },
+export const port: string | number = process.env.PORT || 4000;
+export const databaseUrl: string | undefined = process.env.DATABASE_URL;
+export const jwtAccessSecret: string | undefined = process.env.JWT_ACCESS_SECRET;
+export const jwtRefreshSecret: string | undefined = process.env.JWT_REFRESH_SALT;
+export const cloudinary = {
+  cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  apiKey: process.env.CLOUDINARY_API_KEY,
+  apiSecret: process.env.CLOUDINARY_API_SECRET,
 };
 
-module.exports = config;
+const config: EnvConfig = {
+  port,
+  databaseUrl,
+  jwtAccessSecret,
+  jwtRefreshSecret,
+  cloudinary,
+};
+
+export default config;

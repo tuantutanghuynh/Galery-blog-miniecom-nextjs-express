@@ -1,15 +1,10 @@
 import type { Request, Response } from 'express';
-
-const prisma = require('../services/prisma');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
+import prisma from '../services/prisma';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
 
 // Lấy danh sách các cài đặt. Public endpoint để frontend load trang chủ
-const getSettings = asyncHandler(async (req: Request, res: Response) => {
-  // Express khai báo req.query.keys có thể là string | ParsedQs | string[] | ParsedQs[] |
-  // undefined (vì query string có thể lặp key), nên không thể thu hẹp về string mà không ép
-  // kiểu. Giữ nguyên hành vi cũ: nếu keys thực sự là mảng, .split() bên dưới vẫn ném lỗi y như
-  // code JavaScript gốc — ép kiểu ở đây không thêm hay bớt một nhánh xử lý nào.
+export const getSettings = asyncHandler(async (req: Request, res: Response) => {
   const rawKeys = req.query.keys as string | undefined;
   const keys = rawKeys ? rawKeys.split(',') : [];
 
@@ -26,7 +21,7 @@ const getSettings = asyncHandler(async (req: Request, res: Response) => {
 });
 
 // Admin cập nhật (hoặc tạo mới) một hoặc nhiều setting cùng lúc
-const updateSettings = asyncHandler(async (req: Request, res: Response) => {
+export const updateSettings = asyncHandler(async (req: Request, res: Response) => {
   const { settings } = req.body; // Expect: { "homepage_hero_image": "url...", "homepage_quote": "..." }
 
   if (!settings || typeof settings !== 'object') {
@@ -46,4 +41,4 @@ const updateSettings = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, { message: 'Cập nhật cấu hình thành công' });
 });
 
-module.exports = { getSettings, updateSettings };
+export default { getSettings, updateSettings };

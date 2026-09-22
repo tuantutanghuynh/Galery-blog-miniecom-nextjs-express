@@ -1,10 +1,12 @@
-const router = require('express').Router();
-const rateLimit = require('express-rate-limit');
-const authenticate = require('../middlewares/authenticate');
-const optionalAuthenticate = require('../middlewares/optionalAuthenticate');
-const requireRole = require('../middlewares/requireRole');
-const resolveBrand = require('../middlewares/resolveBrand');
-const ctrl = require('../controllers/quoteRequest.controller');
+import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
+import authenticate from '../middlewares/authenticate';
+import optionalAuthenticate from '../middlewares/optionalAuthenticate';
+import requireRole from '../middlewares/requireRole';
+import resolveBrand from '../middlewares/resolveBrand';
+import * as ctrl from '../controllers/quoteRequest.controller';
+
+const router = Router();
 
 // Mọi endpoint ở đây đều cần biết yêu cầu thuộc storefront nào, kể cả đường công khai — nếu
 // không thì khi storefront thứ hai chạy, hai bên sẽ đọc lẫn yêu cầu của nhau.
@@ -19,7 +21,7 @@ const submitLimiter = rateLimit({
     status: 'error',
     code: 'RATE_LIMIT_EXCEEDED',
     message: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.',
-  },
+  } as any,
 });
 
 router.post('/', submitLimiter, optionalAuthenticate, ctrl.submit);
@@ -33,4 +35,4 @@ router.get('/admin/stats', ctrl.stats);
 router.patch('/admin/:id/status', ctrl.updateStatus);
 router.delete('/admin/:id', ctrl.remove);
 
-module.exports = router;
+export default router;

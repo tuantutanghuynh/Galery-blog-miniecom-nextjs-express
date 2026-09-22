@@ -1,10 +1,12 @@
-const router = require('express').Router();
-const { body } = require('express-validator');
-const validate = require('../middlewares/validate');
-const authenticate = require('../middlewares/authenticate');
-const requireRole = require('../middlewares/requireRole');
-const ctrl = require('../controllers/product.controller');
-const { PRODUCT_STATUS_VALUES } = require('../constants/product');
+import { Router } from 'express';
+import { body } from 'express-validator';
+import validate from '../middlewares/validate';
+import authenticate from '../middlewares/authenticate';
+import requireRole from '../middlewares/requireRole';
+import * as ctrl from '../controllers/product.controller';
+import { PRODUCT_STATUS_VALUES } from '../constants/product';
+
+const router = Router();
 
 // Routes for the product catalogue. Public endpoints serve the storefront and need no token;
 // everything that writes sits behind `authenticate` + `requireRole('admin')`.
@@ -39,7 +41,6 @@ router.post(
   ],
   ctrl.create
 );
-
 
 router.post(
   '/:id/variants',
@@ -103,4 +104,4 @@ router.delete('/images/:imageId', authenticate, requireRole('admin'), ctrl.remov
 
 router.delete('/:id', authenticate, requireRole('admin'), ctrl.remove);
 
-module.exports = router;
+export default router;

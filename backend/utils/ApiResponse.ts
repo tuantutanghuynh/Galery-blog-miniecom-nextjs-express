@@ -10,8 +10,8 @@ import type { Response } from 'express';
 // list endpoint always returns a plain array in `data`. Controllers must call this instead
 // of `res.json()` directly — a hand-written response is how the shape drifts and breaks
 // the frontend's error handling, which reads `json.error?.message`.
-function sendSuccess(res: Response, data: unknown, meta: unknown = null, status = 200) {
+export function sendSuccess(res: Response, data: unknown, meta: unknown = null, status = 200) {
   return res.status(status).json({ data, meta, error: null });
 }
 
-module.exports = { sendSuccess };
+export default sendSuccess;

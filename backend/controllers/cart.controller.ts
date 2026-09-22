@@ -1,8 +1,9 @@
-const prisma = require('../services/prisma');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
-const { PRODUCT_STATUS } = require('../constants/product');
+import type { Request, Response } from 'express';
+import prisma from '../services/prisma';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
+import { PRODUCT_STATUS } from '../constants/product';
 
 // The shopping cart, one per user per brand. A cart row stores only which variant and how many —
 // never a price. Prices are read back from the database on every display and again when the order
@@ -15,7 +16,9 @@ const { PRODUCT_STATUS } = require('../constants/product');
 // `stockQuantity - reservedQuantity`, because units held for someone else's pending order are not
 // ours to sell. `hasIssues` lets the storefront disable the checkout button without re-scanning
 // every line itself.
-const getCart = asyncHandler(async (req, res) => {
+export const getCart = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
+
   const cart = await prisma.cart.findUnique({
     where: { userId_brandSlug: { userId: req.user.id, brandSlug: req.brand.slug } },
     include: {
@@ -37,7 +40,7 @@ const getCart = asyncHandler(async (req, res) => {
   const items = cart.items.map((item) => {
     const { variant } = item;
     const available = variant.stockQuantity - variant.reservedQuantity;
-    const warnings = [];
+    const warnings: string[] = [];
 
     if (variant.product.status !== PRODUCT_STATUS.ACTIVE) warnings.push('UNAVAILABLE');
     else if (available <= 0) warnings.push('OUT_OF_STOCK');
@@ -80,7 +83,8 @@ const getCart = asyncHandler(async (req, res) => {
 // checkout anyway), so only one of the two checks can be trusted, and it is the later one.
 // Adding a variant that is already in the cart increments the existing line rather than creating a
 // duplicate, which is what the unique index on (cartId, variantId) enforces.
-const addItem = asyncHandler(async (req, res) => {
+export const addItem = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
   const { variantId, quantity = 1 } = req.body;
 
   const variant = await prisma.productVariant.findUnique({
@@ -122,11 +126,13 @@ const addItem = asyncHandler(async (req, res) => {
 // than letting one customer edit another's basket. Quantity is replaced, not incremented, because
 // the client sends the value it wants to end up with; incrementing here would double up whenever a
 // request is retried after a flaky connection.
-const updateItem = asyncHandler(async (req, res) => {
+export const updateItem = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
   const { quantity } = req.body;
 
+  const id = req.params.id as string;
   const item = await prisma.cartItem.findFirst({
-    where: { id: req.params.id, cart: { userId: req.user.id, brandSlug: req.brand.slug } },
+    where: { id, cart: { userId: req.user.id, brandSlug: req.brand.slug } },
     include: { variant: true },
   });
   if (!item) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Không tìm thấy sản phẩm trong giỏ');
@@ -143,9 +149,11 @@ const updateItem = asyncHandler(async (req, res) => {
 // so the id alone is not enough to delete somebody else's line. Deleting the last item leaves an
 // empty cart row rather than removing it, which keeps the next `addItem` from having to recreate
 // one and costs a single unused row per user.
-const removeItem = asyncHandler(async (req, res) => {
+export const removeItem = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
+  const id = req.params.id as string;
   const item = await prisma.cartItem.findFirst({
-    where: { id: req.params.id, cart: { userId: req.user.id, brandSlug: req.brand.slug } },
+    where: { id, cart: { userId: req.user.id, brandSlug: req.brand.slug } },
   });
   if (!item) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Không tìm thấy sản phẩm trong giỏ');
 
@@ -153,4 +161,4 @@ const removeItem = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Đã xoá khỏi giỏ hàng' });
 });
 
-module.exports = { getCart, addItem, updateItem, removeItem };
+export default { getCart, addItem, updateItem, removeItem };

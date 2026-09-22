@@ -1,6 +1,5 @@
 import type { RequestHandler } from 'express';
-
-const ApiError = require('../utils/ApiError');
+import ApiError from '../utils/ApiError';
 
 // Role check that runs after `authenticate` and keeps admin-only endpoints closed to
 // ordinary accounts. This is the whole authorisation layer of the project — there is no
@@ -12,7 +11,7 @@ const ApiError = require('../utils/ApiError');
 // apart matters because 401 means "log in", while 403 means "logging in again will not
 // help". It relies entirely on `authenticate` having run first; mounting it alone leaves the
 // endpoint open to anonymous callers, so the two always appear together on a route.
-function requireRole(...allowedRoles: string[]): RequestHandler {
+export function requireRole(...allowedRoles: string[]): RequestHandler {
   return (req, res, next) => {
     if (!req.user) {
       return next(new ApiError(401, 'UNAUTHENTICATED', 'Chưa đăng nhập'));
@@ -26,4 +25,4 @@ function requireRole(...allowedRoles: string[]): RequestHandler {
   };
 }
 
-module.exports = requireRole;
+export default requireRole;

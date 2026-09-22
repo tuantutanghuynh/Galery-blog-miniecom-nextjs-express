@@ -1,9 +1,11 @@
-const router = require('express').Router();
-const { body } = require('express-validator');
-const validate = require('../middlewares/validate');
-const authenticate = require('../middlewares/authenticate');
-const requireRole = require('../middlewares/requireRole');
-const ctrl = require('../controllers/gallery.controller');
+import { Router } from 'express';
+import { body } from 'express-validator';
+import validate from '../middlewares/validate';
+import authenticate from '../middlewares/authenticate';
+import requireRole from '../middlewares/requireRole';
+import * as ctrl from '../controllers/gallery.controller';
+
+const router = Router();
 
 router.get('/', ctrl.list);
 router.post(
@@ -23,4 +25,4 @@ router.put(
 );
 router.delete('/:id', authenticate, requireRole('admin'), ctrl.remove);
 
-module.exports = router;
+export default router;

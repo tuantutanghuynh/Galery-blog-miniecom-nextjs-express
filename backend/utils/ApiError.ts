@@ -9,7 +9,7 @@
 // It extends the built-in Error so stack traces and `instanceof` checks keep working —
 // that `instanceof` check is exactly how the error handler tells a deliberate failure
 // apart from a genuine bug, and it decides whether the real message reaches the client.
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
   code: string;
   details: unknown;
@@ -19,7 +19,8 @@ class ApiError extends Error {
     this.status = status;
     this.code = code;
     this.details = details;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
-module.exports = ApiError;
+export default ApiError;

@@ -1,6 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const { PrismaPg } = require('@prisma/adapter-pg');
-const { databaseUrl } = require('../config/env');
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { databaseUrl } from '../config/env';
 
 // The one Prisma client the whole backend shares. Every controller imports this module
 // rather than constructing its own client.
@@ -16,6 +16,6 @@ if (!databaseUrl) {
 }
 
 const adapter = new PrismaPg({ connectionString: databaseUrl });
-const prisma = new PrismaClient({ adapter });
+export const prisma = new PrismaClient({ adapter });
 
-module.exports = prisma;
+export default prisma;

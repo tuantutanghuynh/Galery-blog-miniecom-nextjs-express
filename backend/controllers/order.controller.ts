@@ -1,17 +1,19 @@
-const crypto = require('crypto');
-const prisma = require('../services/prisma');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { sendSuccess } = require('../utils/ApiResponse');
-const { PRODUCT_STATUS } = require('../constants/product');
-const {
+import crypto from 'crypto';
+import type { Request, Response } from 'express';
+import type { Prisma } from '@prisma/client';
+import prisma from '../services/prisma';
+import ApiError from '../utils/ApiError';
+import asyncHandler from '../utils/asyncHandler';
+import { sendSuccess } from '../utils/ApiResponse';
+import { PRODUCT_STATUS } from '../constants/product';
+import {
   ORDER_STATUS,
   PAYMENT_METHOD,
   PAYMENT_STATUS,
   ORDER_TRANSITIONS,
   PAYMENT_WINDOW_HOURS,
   SHIPPING_FEE_NOT_CALCULATED,
-} = require('../constants/order');
+} from '../constants/order';
 
 // Checkout and order management. This file owns the two things that must never go wrong in a shop:
 // money is always recalculated from the database rather than trusted from the client, and stock is
@@ -22,7 +24,7 @@ const {
 // which a sequential counter would allow — and which would also leak how many orders the shop
 // takes per day. Six base-36 characters give about two billion combinations per day, and the unique
 // index on the column is the real guarantee if two ever collide.
-function generateOrderCode() {
+function generateOrderCode(): string {
   const d = new Date();
   const date = [
     String(d.getFullYear()).slice(2),
@@ -37,7 +39,7 @@ function generateOrderCode() {
 // status change goes through here rather than assigning `orderStatus` directly, because a stray
 // assignment could send a CANCELLED order back to CONFIRMED — resurrecting an order whose stock has
 // already been returned to the shelf, and selling goods that are no longer held for anyone.
-function assertTransition(from, to) {
+function assertTransition(from: string, to: string): void {
   const allowed = ORDER_TRANSITIONS[from] || [];
   if (!allowed.includes(to)) {
     throw new ApiError(409, 'INVALID_STATE_TRANSITION', `Không thể chuyển đơn từ ${from} sang ${to}`);
@@ -56,7 +58,8 @@ function assertTransition(from, to) {
 //
 // Prices come from the database, never from the request. A client that posts its own totals is
 // either out of date or lying, and there is no way to tell which.
-const createOrder = asyncHandler(async (req, res) => {
+export const createOrder = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
   const { paymentMethod, shippingAddress, note } = req.body;
 
   const cart = await prisma.cart.findUnique({
@@ -116,8 +119,8 @@ const createOrder = asyncHandler(async (req, res) => {
       const created = await tx.order.create({
         data: {
           code: generateOrderCode(),
-          userId: req.user.id,
-          brandSlug: req.brand.slug,
+          userId: req.user!.id,
+          brandSlug: req.brand!.slug,
           orderStatus: isCod ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING_PAYMENT,
           paymentMethod,
           paymentStatus: isCod ? PAYMENT_STATUS.UNPAID : PAYMENT_STATUS.PENDING,
@@ -157,12 +160,13 @@ const createOrder = asyncHandler(async (req, res) => {
 
 // Lists the caller's own orders, newest first. The `userId` filter is not a convenience — it is the
 // access control. Without it any logged-in customer could page through every order in the shop.
-const listMyOrders = asyncHandler(async (req, res) => {
+export const listMyOrders = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
   const { page = '1', pageSize = '10' } = req.query;
   const take = Math.min(Number(pageSize) || 10, 50);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = { userId: req.user.id, brandSlug: req.brand.slug };
+  const where: Prisma.OrderWhereInput = { userId: req.user.id, brandSlug: req.brand.slug };
 
   const [items, total] = await Promise.all([
     prisma.order.findMany({ where, orderBy: { createdAt: 'desc' }, include: { items: true }, skip, take }),
@@ -175,9 +179,11 @@ const listMyOrders = asyncHandler(async (req, res) => {
 // Fetches one of the caller's orders by its code. The lookup filters on `userId` as well as `code`,
 // so knowing or guessing somebody else's code is not enough to read their order — the commonest
 // form of broken access control in a shop, and the reason order codes have a random tail too.
-const getMyOrder = asyncHandler(async (req, res) => {
+export const getMyOrder = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
+  const code = req.params.code as string;
   const order = await prisma.order.findFirst({
-    where: { code: req.params.code, userId: req.user.id },
+    where: { code, userId: req.user.id },
     include: { items: true },
   });
   if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
@@ -186,14 +192,15 @@ const getMyOrder = asyncHandler(async (req, res) => {
 
 // Admin listing across all customers for one brand, filterable by order and payment status. This is
 // the screen the shop works from every morning to see which transfers have arrived.
-const adminList = asyncHandler(async (req, res) => {
+export const adminList = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.brand) throw new ApiError(400, 'BRAND_REQUIRED', 'Thiếu thông tin thương hiệu');
   const { page = '1', pageSize = '20', orderStatus, paymentStatus } = req.query;
   const take = Math.min(Number(pageSize) || 20, 100);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where = { brandSlug: req.brand.slug };
-  if (orderStatus) where.orderStatus = orderStatus;
-  if (paymentStatus) where.paymentStatus = paymentStatus;
+  const where: Prisma.OrderWhereInput = { brandSlug: req.brand.slug };
+  if (orderStatus && typeof orderStatus === 'string') where.orderStatus = orderStatus;
+  if (paymentStatus && typeof paymentStatus === 'string') where.paymentStatus = paymentStatus;
 
   const [items, total] = await Promise.all([
     prisma.order.findMany({
@@ -216,9 +223,10 @@ const adminList = asyncHandler(async (req, res) => {
 // This is the exact seam where VNPay will plug in later. The gateway's webhook will call this same
 // logic instead of an admin pressing a button — which is why the bank-transfer flow was built first
 // rather than starting with COD.
-const confirmPayment = asyncHandler(async (req, res) => {
+export const confirmPayment = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const order = await prisma.order.findUnique({
-    where: { id: req.params.id },
+    where: { id },
     include: { items: true },
   });
   if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
@@ -257,9 +265,10 @@ const confirmPayment = asyncHandler(async (req, res) => {
 // to: an unpaid order was only holding units, so the reservation is released; a confirmed order had
 // already been deducted, so the units return to `stockQuantity`. Getting this backwards is how a
 // shop ends up with phantom inventory it cannot sell, or with stock it does not physically have.
-const cancelOrder = asyncHandler(async (req, res) => {
+export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const order = await prisma.order.findUnique({
-    where: { id: req.params.id },
+    where: { id },
     include: { items: true },
   });
   if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
@@ -292,4 +301,4 @@ const cancelOrder = asyncHandler(async (req, res) => {
   sendSuccess(res, updated);
 });
 
-module.exports = { createOrder, listMyOrders, getMyOrder, adminList, confirmPayment, cancelOrder };
+export default { createOrder, listMyOrders, getMyOrder, adminList, confirmPayment, cancelOrder };

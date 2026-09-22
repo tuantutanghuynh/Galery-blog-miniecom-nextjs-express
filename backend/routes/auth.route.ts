@@ -1,8 +1,10 @@
-const router = require('express').Router();
-const { body } = require('express-validator');
-const validate = require('../middlewares/validate');
-const authenticate = require('../middlewares/authenticate');
-const ctrl = require('../controllers/auth.controller');
+import { Router } from 'express';
+import { body } from 'express-validator';
+import validate from '../middlewares/validate';
+import authenticate from '../middlewares/authenticate';
+import * as ctrl from '../controllers/auth.controller';
+
+const router = Router();
 
 router.post(
   '/register',
@@ -62,4 +64,4 @@ router.post(
   ctrl.resetPassword
 );
 
-module.exports = router;
+export default router;

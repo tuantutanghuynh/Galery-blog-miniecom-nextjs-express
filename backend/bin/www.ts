@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const app = require('../app');
-const { port } = require('../config/env');
-const { startExpiredOrderSweeper } = require('../workers/releaseExpiredOrders');
+import app from '../app';
+import { port } from '../config/env';
+import { startExpiredOrderSweeper } from '../workers/releaseExpiredOrders';
 
 app.listen(port, () => {
   console.log(`Server đang chạy tại http://localhost:${port}`);

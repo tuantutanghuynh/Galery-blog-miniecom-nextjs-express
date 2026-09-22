@@ -1,9 +1,9 @@
-const prisma = require('../services/prisma');
-const {
+import prisma from '../services/prisma';
+import {
   ORDER_STATUS,
   PAYMENT_STATUS,
   SWEEP_INTERVAL_MINUTES,
-} = require('../constants/order');
+} from '../constants/order';
 
 // Background cleanup for bank-transfer orders nobody paid for. Placing such an order holds stock in
 // `reservedQuantity`, and without this job that counter only ever goes up: after a few weeks the
@@ -22,7 +22,7 @@ const {
 // Orders are processed one transaction each rather than all in one. A single failing row then
 // cancels only itself; batching them would mean one bad order blocks every other order's stock from
 // coming back.
-async function releaseExpiredOrders() {
+export async function releaseExpiredOrders(): Promise<number> {
   const expired = await prisma.order.findMany({
     where: {
       orderStatus: ORDER_STATUS.PENDING_PAYMENT,
@@ -68,13 +68,13 @@ async function releaseExpiredOrders() {
 // Errors are caught and logged rather than left to bubble: an unhandled rejection inside a timer
 // callback terminates the process in modern Node, which would turn a momentary database hiccup into
 // a dead server.
-function startExpiredOrderSweeper() {
+export function startExpiredOrderSweeper(): NodeJS.Timeout {
   const run = () => {
     releaseExpiredOrders()
       .then((n) => {
         if (n > 0) console.log(`[sweeper] Đã huỷ ${n} đơn quá hạn và hoàn kho`);
       })
-      .catch((err) => console.error('[sweeper] Lỗi khi dọn đơn quá hạn:', err.message));
+      .catch((err: Error) => console.error('[sweeper] Lỗi khi dọn đơn quá hạn:', err.message));
   };
 
   run();
@@ -83,4 +83,4 @@ function startExpiredOrderSweeper() {
   return timer;
 }
 
-module.exports = { releaseExpiredOrders, startExpiredOrderSweeper };
+export default { releaseExpiredOrders, startExpiredOrderSweeper };
