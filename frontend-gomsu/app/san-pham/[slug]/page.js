@@ -77,6 +77,10 @@ export default async function ProductDetailPage({ params }) {
     sku: product.variants[0]?.sku,
     brand: { '@type': 'Brand', name: 'Nghĩa Phái' },
     category: product.category?.name,
+    // Chỉ khai khi chủ shop đã điền trong Cài đặt. Khai bừa một chất liệu không đúng vào
+    // dữ liệu có cấu trúc còn tệ hơn bỏ trống: Google đối chiếu với nội dung hiển thị, lệch
+    // nhau là bỏ qua cả khối markup.
+    material: [settings.product_spec_clay, settings.product_spec_glaze].filter(Boolean).join(', ') || undefined,
     offers:
       prices.length > 1
         ? {

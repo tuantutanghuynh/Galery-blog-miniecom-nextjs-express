@@ -64,7 +64,7 @@ export default function ProductSpecifications({ product, shopSpecs = {} }) {
 
         {/* Tab Content */}
         <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-6 md:p-8">
-          {activeTab === 'specs' && (
+          <div role="tabpanel" hidden={activeTab !== 'specs'}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {specs.map((item, idx) => (
                 <div key={idx} className="flex justify-between py-3 border-b border-[#2a2a2a] text-xs">
@@ -73,9 +73,9 @@ export default function ProductSpecifications({ product, shopSpecs = {} }) {
                 </div>
               ))}
             </div>
-          )}
+          </div>
 
-          {activeTab === 'placement' && (
+          <div role="tabpanel" hidden={activeTab !== 'placement'}>
             <div className="space-y-4 text-xs text-gomsu-text-muted leading-relaxed">
               <p className="text-white font-medium text-sm">Gợi ý bài trí tôn vinh tác phẩm:</p>
               <ul className="list-disc pl-5 space-y-2">
@@ -84,9 +84,9 @@ export default function ProductSpecifications({ product, shopSpecs = {} }) {
                 <li><strong className="text-gomsu-primary font-normal">Bàn làm việc Chủ tịch:</strong> Tác phẩm mang năng lượng thủy thổ hòa hợp, giúp tĩnh tâm và nâng tầm đẳng cấp không gian làm việc.</li>
               </ul>
             </div>
-          )}
+          </div>
 
-          {activeTab === 'care' && (
+          <div role="tabpanel" hidden={activeTab !== 'care'}>
             <div className="space-y-4 text-xs text-gomsu-text-muted leading-relaxed">
               <p className="text-white font-medium text-sm">Quy trình chăm sóc men gốm gia truyền:</p>
               <ul className="list-disc pl-5 space-y-2">
@@ -95,7 +95,7 @@ export default function ProductSpecifications({ product, shopSpecs = {} }) {
                 <li>Tránh va đập trực tiếp với các vật sắc nhọn kim loại nặng.</li>
               </ul>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </section>
