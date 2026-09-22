@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
+import ProductGallery from '@/components/product/ProductGallery';
 import ProductPurchasePanel from '@/components/product/ProductPurchasePanel';
 import ProductStory from '@/components/product/ProductStory';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
@@ -60,10 +61,8 @@ export default async function ProductDetailPage({ params }) {
   if (!product) notFound();
 
   const prices = product.variants.map((v) => v.price);
-  const singlePrice = prices.length > 0 && Math.min(...prices) === Math.max(...prices);
   const available = product.variants.reduce((sum, v) => sum + (v.stockQuantity - v.reservedQuantity), 0);
   const inStock = available > 0;
-  const cover = product.images[0];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
   // Dữ liệu có cấu trúc cho Google và các công cụ AI. Giá và tình trạng hàng ở đây phải khớp
@@ -137,27 +136,7 @@ export default async function ProductDetailPage({ params }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-gomsu-border">
         <div className="border-r border-gomsu-border">
-          <div className="aspect-square overflow-hidden bg-black/20">
-            {cover ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={getImageUrl(cover.url)} alt={cover.altText || product.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs uppercase tracking-widest text-gomsu-text-muted">
-                Chưa có ảnh
-              </div>
-            )}
-          </div>
-
-          {product.images.length > 1 && (
-            <div className="grid grid-cols-4">
-              {product.images.slice(1).map((img) => (
-                <div key={img.id} className="aspect-square overflow-hidden border-r border-t border-gomsu-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getImageUrl(img.url)} alt={img.altText || product.name} className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
+          <ProductGallery images={product.images} productName={product.name} />
         </div>
 
         <div className="p-8 lg:p-12 flex flex-col gap-8">
