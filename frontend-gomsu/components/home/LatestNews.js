@@ -4,13 +4,13 @@ import Link from 'next/link';
 export default function LatestNews({ posts }) {
   return (
     <section>
-      <div className="px-6 py-10 flex items-center justify-between">
+      <div className="page-shell py-10 flex items-center justify-between">
         <h2 className="font-serif text-2xl md:text-3xl">Tin tức mới nhất</h2>
         <Link href="/blog" className="text-xs uppercase tracking-widest text-gomsu-primary">
           Xem tất cả &rarr;
         </Link>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-gomsu-border">
+      <div className="page-shell grid grid-cols-1 md:grid-cols-3 border-b border-gomsu-border">
         {posts.map((post) => (
           <Link
             key={post.id}

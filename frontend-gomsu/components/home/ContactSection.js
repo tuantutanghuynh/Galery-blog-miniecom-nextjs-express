@@ -1,6 +1,6 @@
 export default function ContactSection() {
   return (
-    <section className="px-6 py-20 lg:py-32 border-b border-gomsu-border bg-[#0a0a0a]">
+    <section className="py-20 lg:py-32 border-b border-gomsu-border bg-[#0a0a0a]">
       <div className="page-shell grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8">
         
         {/* Cột 1: Thông điệp chính (Chiếm 5/12) */}
