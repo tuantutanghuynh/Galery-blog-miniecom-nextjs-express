@@ -203,8 +203,9 @@ export default async function ProductDetailPage({ params }) {
         </div>
       </div>
 
-      {/* Tầng 2 và 3 chạy hết chiều ngang nên nằm ngoài lưới hai cột ở trên. */}
-      <ProductStory product={product} imageUrl={settings.product_story_image || '/images/about/nghia-profile.jpg'} />
+      {/* Hai khối này chạy hết chiều ngang nên nằm ngoài lưới hai cột ở trên. Thông số đặt
+          trước câu chuyện: khách đang cân nhắc mua cần số liệu trước, phần kể chuyện là để
+          thuyết phục thêm sau khi đã xem dữ liệu. */}
       <ProductSpecifications
         product={product}
         shopSpecs={{
@@ -213,6 +214,7 @@ export default async function ProductDetailPage({ params }) {
           safety: settings.product_spec_safety,
         }}
       />
+      <ProductStory product={product} imageUrl={settings.product_story_image || '/images/about/nghia-profile.jpg'} />
     </article>
   );
 }
