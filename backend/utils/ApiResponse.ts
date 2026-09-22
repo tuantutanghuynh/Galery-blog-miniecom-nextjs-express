@@ -1,3 +1,5 @@
+import type { Response } from 'express';
+
 // The single place that formats successful API responses. Every endpoint returns the same
 // envelope through this helper, so the frontend never has to guess the shape of a response.
 
@@ -8,7 +10,7 @@
 // list endpoint always returns a plain array in `data`. Controllers must call this instead
 // of `res.json()` directly — a hand-written response is how the shape drifts and breaks
 // the frontend's error handling, which reads `json.error?.message`.
-function sendSuccess(res, data, meta = null, status = 200) {
+function sendSuccess(res: Response, data: unknown, meta: unknown = null, status = 200) {
   return res.status(status).json({ data, meta, error: null });
 }
 

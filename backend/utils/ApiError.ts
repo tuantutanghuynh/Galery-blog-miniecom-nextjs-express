@@ -10,7 +10,11 @@
 // that `instanceof` check is exactly how the error handler tells a deliberate failure
 // apart from a genuine bug, and it decides whether the real message reaches the client.
 class ApiError extends Error {
-  constructor(status, code, message, details = null) {
+  status: number;
+  code: string;
+  details: unknown;
+
+  constructor(status: number, code: string, message: string, details: unknown = null) {
     super(message);
     this.status = status;
     this.code = code;
