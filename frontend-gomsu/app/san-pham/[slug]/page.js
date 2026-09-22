@@ -47,7 +47,12 @@ export async function generateMetadata({ params }) {
 
 export default async function ProductDetailPage({ params }) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const [product, settings] = await Promise.all([
+    getProduct(slug),
+    apiFetch(`/settings?keys=product_story_image`, { cache: 'no-store' })
+      .then((r) => r?.data || {})
+      .catch(() => ({})),
+  ]);
 
   // Sản phẩm nháp hoặc ngừng bán cũng rơi vào đây, vì API trả 404 cho chúng — người ngoài
   // không đoán được là sản phẩm có tồn tại hay không.
@@ -195,7 +200,7 @@ export default async function ProductDetailPage({ params }) {
       </div>
 
       {/* Tầng 2 và 3 chạy hết chiều ngang nên nằm ngoài lưới hai cột ở trên. */}
-      <ProductStory product={product} />
+      <ProductStory product={product} imageUrl={settings.product_story_image || '/images/about/nghia-profile.jpg'} />
       <ProductSpecifications product={product} />
     </article>
   );

@@ -1,6 +1,9 @@
 import Image from 'next/image';
+import VisualEditorOverlay from '@/components/ui/VisualEditorOverlay';
 
-export default function ProductStory({ product }) {
+// Ảnh dùng chung cho khối câu chuyện ở mọi trang sản phẩm — đây là ảnh thương hiệu
+// (nghệ nhân, xưởng), không phải ảnh riêng của từng món, nên một key settings là đủ.
+export default function ProductStory({ product, imageUrl }) {
   return (
     <section className="border-t border-gomsu-border py-16 px-6 md:px-12 bg-[#141414]">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -40,8 +43,9 @@ export default function ProductStory({ product }) {
 
         {/* Story Visual Frame */}
         <div className="relative aspect-4/3 overflow-hidden border border-gomsu-border bg-black/40 group">
+          <VisualEditorOverlay settingKey="product_story_image" />
           <Image
-            src="/images/about/nghia-profile.jpg"
+            src={imageUrl}
             alt="Nghệ nhân gốm Bát Tràng - Nghĩa Phái"
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-90"
