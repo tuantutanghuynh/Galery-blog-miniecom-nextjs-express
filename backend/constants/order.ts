@@ -11,13 +11,13 @@ const ORDER_STATUS = Object.freeze({
   PROCESSING: 'PROCESSING',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
-});
+} as const);
 
 const PAYMENT_METHOD = Object.freeze({
   BANK_TRANSFER: 'BANK_TRANSFER', // gomsu: hold stock, wait for the transfer
   COD: 'COD', // petshop: deduct stock now, courier collects cash
   VNPAY: 'VNPAY', // reserved for the payment gateway work
-});
+} as const);
 
 const PAYMENT_STATUS = Object.freeze({
   PENDING: 'PENDING', // waiting for the customer to pay
@@ -25,7 +25,7 @@ const PAYMENT_STATUS = Object.freeze({
   UNPAID: 'UNPAID', // COD — money is collected on delivery
   FAILED: 'FAILED', // a payment was attempted and rejected
   EXPIRED: 'EXPIRED', // nobody ever paid and the hold ran out
-});
+} as const);
 
 // Which order statuses may follow which. A transition not listed here is rejected rather than
 // written, so a bug cannot move an order from CANCELLED back to CONFIRMED and resurrect an order
@@ -37,7 +37,7 @@ const ORDER_TRANSITIONS = Object.freeze({
   PROCESSING: ['COMPLETED'],
   COMPLETED: [],
   CANCELLED: [],
-});
+} as const);
 
 // How long an unpaid bank-transfer order holds its stock before a cleanup job may cancel it and
 // release the reservation. Anything shorter punishes customers who pay by app outside banking

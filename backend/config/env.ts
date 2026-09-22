@@ -8,7 +8,20 @@ require('dotenv').config();
 // defaulting a database URL or a JWT secret would let the server boot with a silently
 // insecure configuration instead of failing loudly. None of these values may be committed —
 // `.env` is gitignored and `.env.example` documents the shape with dummy values.
-module.exports = {
+
+interface EnvConfig {
+  port: string | number;
+  databaseUrl: string | undefined;
+  jwtAccessSecret: string | undefined;
+  jwtRefreshSecret: string | undefined;
+  cloudinary: {
+    cloudName: string | undefined;
+    apiKey: string | undefined;
+    apiSecret: string | undefined;
+  };
+}
+
+const config: EnvConfig = {
   port: process.env.PORT || 4000,
   databaseUrl: process.env.DATABASE_URL,
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET,
@@ -19,3 +32,5 @@ module.exports = {
     apiSecret: process.env.CLOUDINARY_API_SECRET,
   },
 };
+
+module.exports = config;

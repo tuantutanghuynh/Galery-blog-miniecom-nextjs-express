@@ -9,7 +9,7 @@ const PRODUCT_STATUS = Object.freeze({
   DRAFT: 'draft',
   ACTIVE: 'active',
   ARCHIVED: 'archived',
-});
+} as const);
 
 const PRODUCT_STATUS_VALUES = Object.freeze(Object.values(PRODUCT_STATUS));
 

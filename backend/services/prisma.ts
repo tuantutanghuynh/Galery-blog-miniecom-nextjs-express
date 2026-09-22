@@ -10,6 +10,11 @@ const { databaseUrl } = require('../config/env');
 // (that moved to prisma.config.ts). Constructing `new PrismaClient()` anywhere else would
 // both throw for the missing adapter and open a second connection pool, so this module
 // stays the only place it happens and everything else reuses the exported instance.
+
+if (!databaseUrl) {
+  throw new Error('Thiếu DATABASE_URL — server không thể khởi động mà không có database.');
+}
+
 const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
