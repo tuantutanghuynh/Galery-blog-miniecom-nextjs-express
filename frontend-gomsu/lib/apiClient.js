@@ -11,7 +11,20 @@ export async function apiFetch(path, options = {}) {
   const headers = { 'X-Brand-Slug': BRAND_CATEGORY_SLUG, ...options.headers };
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
-  const json = await res.json();
+
+  // Không phải phản hồi nào cũng là JSON: rate limiter trả chữ "Too many requests" dạng
+  // text, proxy hỏng trả trang HTML 502. Gọi thẳng res.json() sẽ ném lỗi cú pháp khó hiểu
+  // che mất nguyên nhân thật, nên bắt ở đây và báo theo mã HTTP.
+  let json;
+  try {
+    json = await res.json();
+  } catch {
+    const error = new Error(
+      res.status === 429 ? 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.' : `Máy chủ trả về phản hồi không hợp lệ (${res.status})`
+    );
+    error.status = res.status;
+    throw error;
+  }
 
   if (!res.ok) {
     const error = new Error(json.error?.message || 'Yêu cầu thất bại');

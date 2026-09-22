@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
-import AddToQuoteList from '@/components/product/AddToQuoteList';
+import ProductPurchasePanel from '@/components/product/ProductPurchasePanel';
+import ProductStory from '@/components/product/ProductStory';
+import ProductSpecifications from '@/components/product/ProductSpecifications';
 
-const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
 // Lấy một sản phẩm theo slug, trả về null nếu không có thay vì để lỗi bắn lên. Trang gọi hàm
 // này ở hai nơi (generateMetadata và component), nên nó phải chịu được việc sản phẩm không
@@ -146,27 +147,6 @@ export default async function ProductDetailPage({ params }) {
             <h1 className="font-serif text-3xl md:text-5xl font-medium leading-tight">{product.name}</h1>
           </div>
 
-          <div className="flex items-baseline gap-4">
-            <span className="font-serif text-3xl text-gomsu-primary">
-              {prices.length === 0
-                ? 'Liên hệ'
-                : Math.min(...prices) === Math.max(...prices)
-                  ? formatPrice(prices[0])
-                  : `từ ${formatPrice(Math.min(...prices))}`}
-            </span>
-            {/* Chỉ gạch ngang giá gốc khi sản phẩm có đúng một mức giá. Với sản phẩm nhiều
-                biến thể, trang hiện "từ <giá thấp nhất>" — đặt giá gốc của một biến thể khác
-                cạnh đó sẽ khiến khách tưởng bản rẻ nhất đang được giảm từ con số ấy. */}
-            {singlePrice && product.variants[0].compareAtPrice > product.variants[0].price && (
-              <span className="text-gomsu-text-muted line-through text-lg">
-                {formatPrice(product.variants[0].compareAtPrice)}
-              </span>
-            )}
-          </div>
-
-          <p className={`text-xs uppercase tracking-widest ${inStock ? 'text-gomsu-primary' : 'text-gomsu-text-muted'}`}>
-            {inStock ? `Còn hàng — ${available} sản phẩm` : 'Tạm hết hàng'}
-          </p>
 
           {product.description && (
             <div className="text-gomsu-text-muted leading-relaxed whitespace-pre-line">{product.description}</div>
@@ -210,9 +190,13 @@ export default async function ProductDetailPage({ params }) {
             </div>
           )}
 
-          <AddToQuoteList product={product} />
+          <ProductPurchasePanel product={product} />
         </div>
       </div>
+
+      {/* Tầng 2 và 3 chạy hết chiều ngang nên nằm ngoài lưới hai cột ở trên. */}
+      <ProductStory product={product} />
+      <ProductSpecifications product={product} />
     </article>
   );
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
 import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 
@@ -10,7 +10,6 @@ export const metadata = {
   alternates: { canonical: '/san-pham' },
 };
 
-const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
 export default async function ProductsPage({ searchParams }) {
   // Next 16: `searchParams` là Promise, phải await trước khi đọc.

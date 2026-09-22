@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch } from '@/lib/adminAuth';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, formatPrice } from '@/lib/utils';
 import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 
 const STATUS_LABELS = {
@@ -11,7 +11,6 @@ const STATUS_LABELS = {
   archived: { label: 'Ngừng bán', cls: 'border-gray-300 text-gray-600 bg-gray-50' },
 };
 
-const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);

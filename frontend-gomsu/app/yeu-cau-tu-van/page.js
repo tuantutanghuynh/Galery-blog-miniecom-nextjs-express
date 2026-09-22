@@ -4,9 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuoteList } from '@/lib/useQuoteList';
 import { apiFetch } from '@/lib/apiClient';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, formatPrice } from '@/lib/utils';
 
-const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
 export default function QuoteRequestPage() {
   const { items, subtotal, isReady, updateQuantity, remove, clear } = useQuoteList();

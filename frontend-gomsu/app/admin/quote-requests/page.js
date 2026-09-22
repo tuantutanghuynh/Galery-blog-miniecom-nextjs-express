@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { authFetch } from '@/lib/adminAuth';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, formatPrice } from '@/lib/utils';
 
-const formatPrice = (v) => v.toLocaleString('vi-VN') + 'đ';
 
 const STATUS_LABEL = {
   NEW: 'Chưa gọi',
