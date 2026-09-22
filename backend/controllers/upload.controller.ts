@@ -1,3 +1,6 @@
+import type { Request, Response } from 'express';
+import type { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
+
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const config = require('../config/env');
@@ -20,13 +23,13 @@ cloudinary.config({
 // is stored, resized, and made available at a signed HTTPS URL. The stream-based approach
 // avoids buffering the entire file into a second place; it flows straight from `req.file.buffer`
 // → Cloudinary without occupying more RAM than needed.
-function uploadBufferToCloudinary(buffer) {
+function uploadBufferToCloudinary(buffer: Buffer): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { folder: 'miniecom-gomsu' },
-      (error, result) => {
+      (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
         if (error) return reject(error);
-        resolve(result);
+        resolve(result as UploadApiResponse);
       }
     );
     streamifier.createReadStream(buffer).pipe(uploadStream);
@@ -39,7 +42,7 @@ function uploadBufferToCloudinary(buffer) {
 // guaranteed to exist because the upload middleware filtered it; this function only needs to
 // reject if the file somehow got lost between middleware and here, which would signal a serious
 // pipeline break.
-const uploadImage = asyncHandler(async (req, res) => {
+const uploadImage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.file) throw new ApiError(422, 'FILE_REQUIRED', 'Thiếu file ảnh');
 
   const result = await uploadBufferToCloudinary(req.file.buffer);

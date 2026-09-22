@@ -1,3 +1,5 @@
+import type { Request, Response } from 'express';
+
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const prisma = require('../services/prisma');
@@ -7,7 +9,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { sendSuccess } = require('../utils/ApiResponse');
 
-const register = asyncHandler(async (req, res) => {
+const register = asyncHandler(async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new ApiError(409, 'EMAIL_TAKEN', 'Email này đã được đăng ký');
@@ -24,7 +26,7 @@ const register = asyncHandler(async (req, res) => {
   }, null, 201);
 });
 
-const login = asyncHandler(async (req, res) => {
+const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Email hoặc mật khẩu không đúng');
@@ -39,7 +41,7 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
-const refresh = asyncHandler(async (req, res) => {
+const refresh = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
   if (!refreshToken) throw new ApiError(401, 'NO_REFRESH_TOKEN', 'Refresh token không được cung cấp');
 
@@ -55,15 +57,16 @@ const refresh = asyncHandler(async (req, res) => {
   sendSuccess(res, { accessToken, refreshToken: rotated.rawToken });
 });
 
-const me = asyncHandler(async (req, res) => {
+const me = asyncHandler(async (req: Request, res: Response) => {
   // authenticate gán req.user = { id, role } chứ không giữ nguyên payload JWT, nên phải đọc
   // .id. Đọc .sub thì luôn nhận undefined và Prisma ném lỗi -> endpoint 500 với mọi token.
+  if (!req.user) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa đăng nhập');
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) throw new ApiError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
   sendSuccess(res, { id: user.id, email: user.email, fullName: user.fullName, role: user.role });
 });
 
-const requestPasswordReset = asyncHandler(async (req, res) => {
+const requestPasswordReset = asyncHandler(async (req: Request, res: Response) => {
   const { email } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
@@ -84,7 +87,7 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Kiểm tra console/logs để lấy link reset password' });
 });
 
-const resetPassword = asyncHandler(async (req, res) => {
+const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   const { email, token, newPassword } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new ApiError(400, 'INVALID_REQUEST', 'Email không hợp lệ');
@@ -103,7 +106,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 
-const logout = asyncHandler(async (req, res) => {
+const logout = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
   if (refreshToken) {
     await revokeRefreshToken(refreshToken);
