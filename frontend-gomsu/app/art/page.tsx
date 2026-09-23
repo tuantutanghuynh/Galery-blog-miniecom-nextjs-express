@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Nghệ Thuật',
+  alternates: { canonical: '/art' },
 };
 
 export default function PlaceholderPage() {

@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Dự Án',
+  alternates: { canonical: '/projects' },
 };
 
 export default function PlaceholderPage() {

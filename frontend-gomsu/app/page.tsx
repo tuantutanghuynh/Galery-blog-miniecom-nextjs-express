@@ -13,8 +13,11 @@ import type { BlogPost } from '@/types/blog';
 import type { ShopSettings } from '@/types/setting';
 
 export const metadata: Metadata = {
-  title: 'Trang chủ',
+  // Viết đủ thương hiệu ở đây vì `title.template` của layout KHÔNG áp dụng cho page.tsx
+  // cùng cấp route segment — để 'Trang chủ' không thì title sẽ chỉ là 'Trang chủ'.
+  title: 'Nghĩa Phái Art & Design — Gốm sứ nghệ thuật Bát Tràng thủ công',
   description: 'Hơi thở đất - Dáng hình thời gian. Gốm sứ nghệ thuật thủ công Bát Tràng.',
+  alternates: { canonical: '/' },
 };
 
 export default async function HomePage() {

@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Xưởng Sản Xuất',
+  alternates: { canonical: '/workshop' },
 };
 
 export default function PlaceholderPage() {

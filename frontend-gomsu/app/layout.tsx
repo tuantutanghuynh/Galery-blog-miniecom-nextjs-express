@@ -26,9 +26,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app'
   ),
-  alternates: {
-    canonical: '/',
-  },
+  // KHÔNG đặt `alternates.canonical` ở đây: Next.js kế thừa nó xuống mọi trang con chưa tự
+  // khai, khiến /about, /contact... đều tự xưng là trang chủ và bị Google gỡ khỏi index.
+  // Mỗi trang tự khai canonical của riêng nó.
   openGraph: {
     title: 'Nghĩa Phái Art & Design',
     description: 'Gốm sứ nghệ thuật Bát Tràng',

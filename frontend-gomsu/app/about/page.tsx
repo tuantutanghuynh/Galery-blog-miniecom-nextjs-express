@@ -5,8 +5,10 @@ import VisualEditorOverlay from '@/components/ui/VisualEditorOverlay';
 import React from 'react';
 
 export const metadata: Metadata = {
-  title: 'Về Chúng Tôi | Nghĩa Phái Art',
+  // Chỉ ghi phần riêng: template của layout tự nối ' | Nghĩa Phái' vào sau.
+  title: 'Về Chúng Tôi',
   description: 'Tiểu sử nghệ sĩ Nguyễn Đức Nghĩa',
+  alternates: { canonical: '/about' },
 };
 
 // Component dùng chung cho Timeline để tái sử dụng
