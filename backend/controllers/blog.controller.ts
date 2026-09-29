@@ -4,6 +4,7 @@ import prisma from '../services/prisma';
 import ApiError from '../utils/ApiError';
 import asyncHandler from '../utils/asyncHandler';
 import { sendSuccess } from '../utils/ApiResponse';
+import { sanitizeContent } from '../utils/sanitizeContent';
 
 // Every read and write path for blog posts, serving both the public site and the admin
 // dashboard. Two ideas shape this file: scheduled publishing is derived from `publishedAt`
@@ -150,7 +151,9 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
       title,
       slug,
       excerpt,
-      content,
+      // Lọc trước khi ghi: nội dung này được bơm thẳng ra trang công khai bằng
+      // `dangerouslySetInnerHTML`, nên phải sạch từ lúc vào DB. Xem utils/sanitizeContent.
+      content: sanitizeContent(content),
       coverImageUrl,
       categoryId: categoryId || null,
       seoTitle,
@@ -189,7 +192,9 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
     title,
     slug,
     excerpt,
-    content,
+    // `sanitizeContent` trả về undefined khi client không gửi `content`, giữ đúng quy ước
+    // "field undefined thì Prisma bỏ qua" mà hàm update này dựa vào.
+    content: sanitizeContent(content),
     coverImageUrl,
     category: categoryId !== undefined ? (categoryId ? { connect: { id: categoryId } } : { disconnect: true }) : undefined,
     seoTitle,

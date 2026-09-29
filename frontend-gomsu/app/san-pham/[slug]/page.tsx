@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getImageUrl, formatPrice } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
+import { toJsonLd } from '@/lib/jsonLd';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductPurchasePanel from '@/components/product/ProductPurchasePanel';
 import ProductStory from '@/components/product/ProductStory';
@@ -138,11 +139,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
     <article>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLd(breadcrumbLd) }}
       />
 
       <nav className="border-b border-gomsu-border text-xs uppercase tracking-widest text-gomsu-text-muted">

@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { getImageUrl } from '@/lib/utils';
 import { apiFetch } from '@/lib/apiClient';
 import { renderHtml, excerptFromContent } from '@/lib/markdown';
+import { toJsonLd } from '@/lib/jsonLd';
 import { notFound } from 'next/navigation';
 import { BlogPost } from '@/types/blog';
 
@@ -81,8 +82,8 @@ export default async function BlogDetailPage({ params }: PageProps) {
 
   return (
     <article className="max-w-3xl mx-auto px-6 py-16">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(breadcrumbLd) }} />
       <h3 className="font-sans text-xs uppercase tracking-[0.2em] text-gomsu-text-muted mb-4">
         Nghĩa Phái Art &amp; Design
       </h3>
