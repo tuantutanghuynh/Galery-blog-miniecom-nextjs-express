@@ -5,6 +5,7 @@ import './globals.css';
 import Navbar from '@/components/layout/Navbar';
 import { AuthProvider } from '@/lib/useAuth';
 import { QuoteListProvider } from '@/lib/useQuoteList';
+import { toJsonLd } from '@/lib/jsonLd';
 
 const playfair = Playfair_Display({
   subsets: ['vietnamese'],
@@ -81,7 +82,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans bg-gomsu-background text-gomsu-text antialiased">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
         />
         <AuthProvider>
           <QuoteListProvider>
