@@ -9,8 +9,9 @@ import prisma from '../services/prisma';
 // cả — đúng cho việc seed lần đầu, nhưng vô dụng đúng lúc cần nhất là khi quên mật khẩu.
 // Bản này ghi đè mật khẩu, vì đường khôi phục qua email vẫn chưa gửi được thư.
 //
-// Cách dùng:
-//   npx tsx scripts/seedAdmin.ts <email> <mật-khẩu>
+// Cách dùng (chạy từ thư mục backend/, mật khẩu để trong nháy ĐƠN vì zsh coi `!` là ký tự
+// lịch sử và sẽ làm hỏng lệnh nếu dùng nháy kép):
+//   npx tsx scripts/seedAdmin.ts admin@nghiaphai.com 'MatKhauMoi#2026'
 //
 // Mật khẩu phải theo đúng quy tắc mà route /auth/reset-password đang kiểm, để tài khoản tạo
 // bằng script không lọt qua được một tiêu chuẩn thấp hơn API.
@@ -26,7 +27,13 @@ async function main() {
   const [email, password] = process.argv.slice(2);
 
   if (!email || !password) {
-    console.error('Thiếu tham số.\n  Cách dùng: npx tsx scripts/seedAdmin.ts <email> <mật-khẩu>');
+    // In ví dụ thật thay vì dấu ngoặc nhọn: gõ nguyên `<email>` vào zsh sẽ thành cú pháp
+    // chuyển hướng và báo "parse error near `<'".
+    console.error(
+      'Thiếu tham số.\n' +
+        "  Cách dùng: npx tsx scripts/seedAdmin.ts admin@nghiaphai.com 'MatKhauMoi#2026'\n" +
+        '  (chạy từ thư mục backend/, mật khẩu để trong nháy ĐƠN)'
+    );
     process.exitCode = 1;
     return;
   }
