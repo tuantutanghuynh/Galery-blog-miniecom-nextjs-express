@@ -19,7 +19,13 @@ export type QuoteStatus = (typeof QUOTE_STATUS)[keyof typeof QUOTE_STATUS];
 
 const MAX_ITEMS = 50;
 
-// Nhận yêu cầu từ khách vãng lai.
+// Nhận yêu cầu từ khách vãng lai. Đây là endpoint công khai thứ hai (sau /contact) cho phép
+// người lạ ghi vào database, nên nó mang theo honeypot giống hệt form liên hệ.
+//
+// Client chỉ gửi variantId và số lượng. Tên, SKU và giá đều do server đọc lại từ database —
+// giá client gửi lên không bao giờ được tin, kể cả khi luồng này không hề chuyển tiền: nhân
+// viên sẽ đọc đúng con số đó để báo giá qua điện thoại, nên một giá bị sửa từ trình duyệt sẽ
+// thành cam kết miệng với khách.
 export const submit = asyncHandler(async (req: Request, res: Response) => {
   if (!req.brand) throw new ApiError(400, 'BRAND_REQUIRED', 'Thiếu thông tin thương hiệu');
   const { customerName, phone, email, address, note, items, website_url } = req.body;
@@ -56,6 +62,8 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
   const snapshot = items
     .map((raw: any) => {
       const variant = byId.get(raw.variantId);
+      // Bỏ qua dòng trỏ tới sản phẩm đã bị xoá thay vì làm hỏng cả yêu cầu: khách để trang mở vài
+      // ngày rồi mới gửi là chuyện bình thường, và mất một dòng vẫn tốt hơn mất cả khách.
       if (!variant) return null;
 
       const quantity = Math.min(Math.max(Number(raw.quantity) || 1, 1), 99);
@@ -81,6 +89,8 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
   const created = await prisma.quoteRequest.create({
     data: {
       brandSlug: req.brand.slug,
+      // Gắn tài khoản nếu khách tình cờ đang đăng nhập. Không có thì để trống — luồng này
+      // không bắt đăng nhập, xem ghi chú ở model QuoteRequest.
       userId: req.user?.id || null,
       customerName: customerName.trim(),
       phone: phone.trim(),
@@ -91,10 +101,15 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
+  // Chỉ trả về id và mốc thời gian. Trang cảm ơn không cần đọc lại gì, và đây là endpoint công
+  // khai nên trả ít nhất có thể.
   sendSuccess(res, { id: created.id, createdAt: created.createdAt }, null, 201);
 });
 
 // Danh sách yêu cầu của chính người đang đăng nhập, cho trang cá nhân.
+//
+// Lọc theo userId chứ không theo số điện thoại: tra bằng số điện thoại thì ai biết số của
+// người khác là đọc được họ tên và địa chỉ của họ.
 export const listMine = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
   const rows = await prisma.quoteRequest.findMany({
@@ -103,10 +118,13 @@ export const listMine = asyncHandler(async (req: Request, res: Response) => {
     take: 50,
   });
 
+  // Không trả finalAmount: đó là con số nhân viên chốt nội bộ, có thể khác giá khách thấy
+  // và chưa chắc đã thống nhất với khách.
   sendSuccess(res, rows.map(({ finalAmount, ...rest }) => rest));
 });
 
-// Danh sách cho nhân viên, mới nhất trước.
+// Danh sách cho nhân viên, mới nhất trước. Lọc theo brand để khi storefront thứ hai chạy thì
+// hai bên không đọc đơn của nhau — khác với hộp thư liên hệ vốn dùng chung.
 export const adminList = asyncHandler(async (req: Request, res: Response) => {
   if (!req.brand) throw new ApiError(400, 'BRAND_REQUIRED', 'Thiếu thông tin thương hiệu');
   const { page = '1', pageSize = '20', status } = req.query;
@@ -126,7 +144,12 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, rows, { page: Number(page), pageSize: take, total });
 });
 
-// Nhân viên đánh dấu đã gọi hoặc đã chốt.
+// Nhân viên đánh dấu đã gọi hoặc đã chốt. Kiểm tra brand trong cùng câu lệnh update để người
+// của brand này không sửa được yêu cầu của brand kia.
+//
+// Chốt đơn bắt buộc kèm số tiền thật đã thoả thuận — đó là con số duy nhất dùng được cho
+// thống kê doanh thu. Rời khỏi trạng thái chốt thì xoá cả hai trường, để không còn bản ghi
+// nào mang số tiền chốt mà lại không ở trạng thái đã chốt.
 export const updateStatus = asyncHandler(async (req: Request, res: Response) => {
   if (!req.brand) throw new ApiError(400, 'BRAND_REQUIRED', 'Thiếu thông tin thương hiệu');
   const { status, finalAmount } = req.body;
@@ -158,7 +181,8 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
   sendSuccess(res, { id, ...data });
 });
 
-// Doanh thu và tỉ lệ chốt theo khoảng thời gian.
+// Doanh thu và tỉ lệ chốt theo khoảng thời gian, tính trên số tiền thật chứ không phải giá
+// khách xem trên web. `from`/`to` là chuỗi ngày ISO; thiếu thì lấy toàn bộ lịch sử.
 export const stats = asyncHandler(async (req: Request, res: Response) => {
   if (!req.brand) throw new ApiError(400, 'BRAND_REQUIRED', 'Thiếu thông tin thương hiệu');
   const { from, to } = req.query;
@@ -205,7 +229,12 @@ export const stats = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// Xoá hẳn, dùng để dọn spam lọt qua honeypot.
+// Xoá hẳn, dùng để dọn spam lọt qua honeypot. Không có thùng rác và không hoàn tác được.
+//
+// Chỉ xoá được yêu cầu còn ở trạng thái "chưa gọi", vì spam thì luôn nằm ở đó. Đơn đã gọi là
+// đã có người thật nói chuyện, đơn đã chốt là một lần bán hàng thật — xoá chúng là xoá sổ
+// sách, và thống kê doanh thu sẽ hụt đi mà không ai biết. Chặn ngay trong câu lệnh xoá chứ
+// không chỉ ẩn nút trên giao diện, vì giao diện không phải là nơi bảo vệ dữ liệu.
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   if (!req.brand) throw new ApiError(400, 'BRAND_REQUIRED', 'Thiếu thông tin thương hiệu');
   const id = req.params.id as string;

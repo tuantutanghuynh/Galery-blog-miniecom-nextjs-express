@@ -82,6 +82,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
   // one of them.
   const items = [...cart.items].sort((a, b) => (a.variantId < b.variantId ? -1 : 1));
 
+  const userId = req.user.id;
+  const brandSlug = req.brand.slug;
   const isCod = paymentMethod === PAYMENT_METHOD.COD;
 
   const order = await prisma.$transaction(
@@ -119,8 +121,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
       const created = await tx.order.create({
         data: {
           code: generateOrderCode(),
-          userId: req.user!.id,
-          brandSlug: req.brand!.slug,
+          userId,
+          brandSlug,
           orderStatus: isCod ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING_PAYMENT,
           paymentMethod,
           paymentStatus: isCod ? PAYMENT_STATUS.UNPAID : PAYMENT_STATUS.PENDING,
