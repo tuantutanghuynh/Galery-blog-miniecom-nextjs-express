@@ -2,6 +2,7 @@
 import app from '../app';
 import { port } from '../config/env';
 import { startExpiredOrderSweeper } from '../workers/releaseExpiredOrders';
+import { startRefreshTokenPruner } from '../workers/pruneRefreshTokens';
 
 app.listen(port, () => {
   console.log(`Server đang chạy tại http://localhost:${port}`);
@@ -10,4 +11,8 @@ app.listen(port, () => {
   // one instance, and the job claims each order with a conditional UPDATE so it stays correct if a
   // second instance ever appears. It should move to a real scheduler once the deployment grows.
   startExpiredOrderSweeper();
+
+  // Dọn refresh token hết hạn. Cùng lý do đặt ở đây như sweeper trên: đủ dùng khi chỉ có một
+  // instance, và lệnh xoá có điều kiện nên chạy hai bản song song cũng không sai dữ liệu.
+  startRefreshTokenPruner();
 });

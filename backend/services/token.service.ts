@@ -1,91 +1,123 @@
 import crypto from 'crypto';
+
 import prisma from './prisma';
 
-// Lifecycle of refresh tokens: issuing, rotating and revoking them. Unlike access tokens,
-// these are stored in the database so a session can actually be killed, and they implement
-// rotation with reuse detection — the mechanism that limits the damage of a stolen token.
+// Thời gian sống của một Refresh Token: 7 ngày (tính bằng mili-giây)
+export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 ngày
+// Giữ lại bản ghi đã thu hồi thêm 30 ngày sau khi nó hết hạn, phục vụ phát hiện token bị đánh
+// cắp (xem rotateRefreshToken). Dài hơn hẳn TTL là có chủ đích: kẻ trộm thường đem token ra
+// dùng sau khi chủ tài khoản đã đăng nhập lại và vô tình thu hồi nó.
+export const REUSE_DETECTION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-// Hashes a raw token with SHA-256 before it touches the database. Only the hash is stored,
-// so a leaked database dump cannot be replayed as valid sessions — the same reasoning as
-// hashing passwords. SHA-256 is enough here (unlike for passwords, where bcrypt is used)
-// because the token is 80 hex characters of cryptographic randomness, not a guessable
-// secret, so slow hashing buys nothing against brute force.
+/**
+ * Hàm tiện ích: Mã hóa bản băm SHA-256 cho Refresh Token.
+ * - Chỉ lưu hash vào database, không lưu raw token dạng plain text để chống lộ phiên đăng nhập khi rò rỉ DB.
+ */
 function hashToken(rawToken: string): string {
-    return crypto.createHash('sha256').update(rawToken).digest('hex');
+  return crypto.createHash('sha256').update(rawToken).digest('hex');
 }
 
-// Creates a new refresh token for a user and stores only its hash with a 7-day expiry.
-// Returns the raw token, which is the one and only time it exists in plaintext — it goes to
-// the client and can never be recovered from the database afterwards. The value comes from
-// `crypto.randomBytes` rather than a JWT because this token carries no claims; it is just
-// an opaque lookup key, which keeps it short and makes revocation a simple row update.
+/**
+ * Phát hành một Refresh Token mới cho người dùng.
+ * - Sinh chuỗi ngẫu nhiên bảo mật 40 bytes dạng hex.
+ * - Lưu bản băm SHA-256 kèm thời hạn 7 ngày vào database.
+ * - Trả về token gốc chưa băm (raw token) cho client.
+ *
+ * Không dọn bảng ở đây: việc đó nằm ở workers/pruneRefreshTokens.ts, chạy theo chu kỳ. Xem
+ * ghi chú trong file đó để biết vì sao gắn vào đường đăng nhập là sai.
+ */
 export async function issueRefreshToken(userId: string): Promise<string> {
-    const rawToken = crypto.randomBytes(40).toString('hex');
+  const rawToken = crypto.randomBytes(40).toString('hex');
 
-    await prisma.refreshToken.create({
-        data: {
-            userId,
-            tokenHash: hashToken(rawToken),
-            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
-        }
-    });
+  await prisma.refreshToken.create({
+    data: {
+      userId,
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+    },
+  });
 
-    return rawToken;
+  return rawToken;
 }
 
-// Exchanges a valid refresh token for a brand new one, returning `{ userId, rawToken }`, or
-// `null` for any token that must be rejected. The lookup deliberately ignores revocation
-// status at first, because finding an already-revoked token is the signal that matters: a
-// revoked token can only be replayed by someone who kept a copy, so every active session of
-// that user is revoked immediately and the caller is forced to log in again. A valid token
-// is revoked before a replacement is issued, so each refresh token is usable exactly once
-// and a stolen one stops working as soon as the real user refreshes.
-export async function rotateRefreshToken(rawToken: string): Promise<{ userId: string; rawToken: string } | null> {
-    const tokenHash = hashToken(rawToken);
+/**
+ * Đổi Refresh Token cũ lấy một Refresh Token mới (Refresh Token Rotation).
+ * - Kiểm tra tính hợp lệ của token.
+ * - Cơ chế phát hiện tái sử dụng token (Reuse Detection): Nếu token gửi lên ĐÃ BỊ THU HỒI từ trước,
+ *   nghĩa là token có thể đã bị rò rỉ/đánh cắp -> Thu hồi toàn bộ phiên đăng nhập của user này ngay lập tức.
+ * - Nếu token hợp lệ: Đánh dấu đã thu hồi token hiện tại và cấp phát một token mới.
+ */
+export async function rotateRefreshToken(
+  rawToken: string
+): Promise<{ userId: string; rawToken: string } | null> {
+  const tokenHash = hashToken(rawToken);
 
-    const record = await prisma.refreshToken.findFirst({
-        where: { tokenHash }
-    });
+  const record = await prisma.refreshToken.findFirst({
+    where: { tokenHash },
+  });
 
-    if (!record) {
-        return null;
-    }
+  if (!record) {
+    return null;
+  }
 
-    if (record.revokedAt !== null) {
-        await prisma.refreshToken.updateMany({
-            where: { userId: record.userId, revokedAt: null },
-            data: { revokedAt: new Date() }
-        });
-        return null;
-    }
-
-    if (new Date() > record.expiresAt) {
-        return null;
-    }
-
-    await prisma.refreshToken.update({
-        where: { id: record.id },
-        data: { revokedAt: new Date() },
-    });
-
-    const newRawToken = await issueRefreshToken(record.userId);
-    return { userId: record.userId, rawToken: newRawToken };
-}
-
-// Marks a single refresh token as revoked, which is what logging out does. It uses
-// `updateMany` filtered on `revokedAt: null` so calling it twice is harmless and an already
-// revoked token is left untouched — re-stamping the timestamp would erase when the session
-// actually ended. Note it stays silent when no row matches: a logout request carrying a
-// bogus token should not leak whether that token ever existed.
-export async function revokeRefreshToken(rawToken: string): Promise<void> {
-    const tokenHash = hashToken(rawToken);
-
+  // Phát hiện tấn công đánh cắp token: Token đã bị revoke trước đó mà vẫn đem ra dùng lại
+  if (record.revokedAt !== null) {
     await prisma.refreshToken.updateMany({
-        where: { tokenHash, revokedAt: null },
-        data: { revokedAt: new Date() },
+      where: {
+        userId: record.userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
     });
+
+    return null;
+  }
+
+  // Kiểm tra thời hạn token
+  if (new Date() > record.expiresAt) {
+    return null;
+  }
+
+  // Thu hồi token cũ
+  await prisma.refreshToken.update({
+    where: { id: record.id },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+
+  // Phát hành token mới thay thế
+  const newRawToken = await issueRefreshToken(record.userId);
+
+  return {
+    userId: record.userId,
+    rawToken: newRawToken,
+  };
 }
 
-export default { issueRefreshToken, rotateRefreshToken, revokeRefreshToken };
+/**
+ * Thu hồi một Refresh Token cụ thể (dùng khi người dùng đăng xuất).
+ * - Cập nhật trường `revokedAt` bằng thời điểm hiện tại.
+ */
+export async function revokeRefreshToken(rawToken: string): Promise<void> {
+  const tokenHash = hashToken(rawToken);
+
+  await prisma.refreshToken.updateMany({
+    where: {
+      tokenHash,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+}
+
+export default {
+  issueRefreshToken,
+  rotateRefreshToken,
+  revokeRefreshToken,
+};

@@ -123,6 +123,7 @@ model BlogPost {
   updatedAt      DateTime  @updatedAt
   @@index([authorId])
   @@index([categoryId])
+  @@index([status, publishedAt(sort: Desc)])
 }
 
 model GalleryItem {

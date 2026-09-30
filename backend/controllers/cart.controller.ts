@@ -1,32 +1,55 @@
 import type { Request, Response } from 'express';
+
 import prisma from '../services/prisma';
+
 import ApiError from '../utils/ApiError';
+
 import asyncHandler from '../utils/asyncHandler';
+
 import { sendSuccess } from '../utils/ApiResponse';
+
 import { PRODUCT_STATUS } from '../constants/product';
 
-// The shopping cart, one per user per brand. A cart row stores only which variant and how many —
-// never a price. Prices are read back from the database on every display and again when the order
-// is placed, so a cart left open for a week can never lock in yesterday's price.
-
-// Loads the caller's cart for the current brand, or an empty shell if they have none yet, and
-// recomputes every line total from today's prices. Each line carries its own warnings instead of
-// failing the whole request: a cart holding one sold-out item should still render, with that item
-// flagged, rather than returning an error and showing the customer nothing. Availability is
-// `stockQuantity - reservedQuantity`, because units held for someone else's pending order are not
-// ours to sell. `hasIssues` lets the storefront disable the checkout button without re-scanning
-// every line itself.
+/**
+ * Lấy thông tin giỏ hàng của người dùng hiện tại theo thương hiệu (brand).
+ * - Luôn tính lại đơn giá và thành tiền theo giá mới nhất trong database.
+ * - Kiểm tra số lượng tồn kho khả dụng (stockQuantity - reservedQuantity).
+ * - Gắn cờ cảnh báo (warnings: UNAVAILABLE, OUT_OF_STOCK, INSUFFICIENT_STOCK) nếu sản phẩm gặp vấn đề về tồn kho.
+ * - Trả về `hasIssues = true` nếu có bất kỳ sản phẩm nào có cảnh báo để frontend vô hiệu hóa nút thanh toán.
+ */
 export const getCart = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
+  if (!req.user || !req.brand) {
+    throw new ApiError(
+      401,
+      'UNAUTHENTICATED',
+      'Chưa xác thực'
+    );
+  }
 
   const cart = await prisma.cart.findUnique({
-    where: { userId_brandSlug: { userId: req.user.id, brandSlug: req.brand.slug } },
+    where: {
+      userId_brandSlug: {
+        userId: req.user.id,
+        brandSlug: req.brand.slug,
+      },
+    },
     include: {
       items: {
-        orderBy: { createdAt: 'asc' },
+        orderBy: {
+          createdAt: 'asc',
+        },
         include: {
           variant: {
-            include: { product: { include: { images: { orderBy: { position: 'asc' }, take: 1 } } } },
+            include: {
+              product: {
+                include: {
+                  images: {
+                    orderBy: { position: 'asc' },
+                    take: 1,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -34,17 +57,29 @@ export const getCart = asyncHandler(async (req: Request, res: Response) => {
   });
 
   if (!cart) {
-    return sendSuccess(res, { id: null, brandSlug: req.brand.slug, items: [], subtotal: 0, hasIssues: false });
+    return sendSuccess(res, {
+      id: null,
+      brandSlug: req.brand.slug,
+      items: [],
+      subtotal: 0,
+      hasIssues: false,
+    });
   }
 
   const items = cart.items.map((item) => {
     const { variant } = item;
+
     const available = variant.stockQuantity - variant.reservedQuantity;
+
     const warnings: string[] = [];
 
-    if (variant.product.status !== PRODUCT_STATUS.ACTIVE) warnings.push('UNAVAILABLE');
-    else if (available <= 0) warnings.push('OUT_OF_STOCK');
-    else if (item.quantity > available) warnings.push('INSUFFICIENT_STOCK');
+    if (variant.product.status !== PRODUCT_STATUS.ACTIVE) {
+      warnings.push('UNAVAILABLE');
+    } else if (available <= 0) {
+      warnings.push('OUT_OF_STOCK');
+    } else if (item.quantity > available) {
+      warnings.push('INSUFFICIENT_STOCK');
+    }
 
     return {
       id: item.id,
@@ -76,89 +111,205 @@ export const getCart = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// Adds a variant to the cart, creating the cart on first use. Stock is checked leniently here —
-// exceeding it is reported back as a warning rather than refused — because the real check belongs
-// at checkout, where stock is actually reserved. Blocking now would be both too strict (the item
-// may be restocked before they pay) and not strict enough (stock can sell out between now and
-// checkout anyway), so only one of the two checks can be trusted, and it is the later one.
-// Adding a variant that is already in the cart increments the existing line rather than creating a
-// duplicate, which is what the unique index on (cartId, variantId) enforces.
+/**
+ * Thêm một biến thể sản phẩm vào giỏ hàng.
+ * - Tự động tạo giỏ hàng nếu người dùng chưa có giỏ hàng cho thương hiệu này.
+ * - Kiểm tra xem biến thể có thuộc phạm vi danh mục của thương hiệu hiện tại không (tránh lẫn lộn dữ liệu).
+ * - Nếu sản phẩm đã có trong giỏ hàng: Tăng số lượng (`increment`).
+ * - Nếu sản phẩm chưa có trong giỏ: Thêm mới dòng CartItem.
+ */
 export const addItem = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
+  if (!req.user || !req.brand) {
+    throw new ApiError(
+      401,
+      'UNAUTHENTICATED',
+      'Chưa xác thực'
+    );
+  }
+
   const { variantId, quantity = 1 } = req.body;
 
   const variant = await prisma.productVariant.findUnique({
     where: { id: variantId },
     include: { product: true },
   });
-  if (!variant) throw new ApiError(404, 'VARIANT_NOT_FOUND', 'Không tìm thấy biến thể sản phẩm');
 
-  if (variant.product.status !== PRODUCT_STATUS.ACTIVE) {
-    throw new ApiError(409, 'PRODUCT_UNAVAILABLE', 'Sản phẩm hiện không bán');
+  if (!variant) {
+    throw new ApiError(
+      404,
+      'VARIANT_NOT_FOUND',
+      'Không tìm thấy biến thể sản phẩm'
+    );
   }
 
-  // A variant from another brand must never land in this cart, or the petshop storefront could be
-  // used to buy pottery by posting a guessed id.
+  if (variant.product.status !== PRODUCT_STATUS.ACTIVE) {
+    throw new ApiError(
+      409,
+      'PRODUCT_UNAVAILABLE',
+      'Sản phẩm hiện không bán'
+    );
+  }
+
   if (!req.brand.categoryIds.includes(variant.product.categoryId)) {
-    throw new ApiError(404, 'VARIANT_NOT_FOUND', 'Không tìm thấy biến thể sản phẩm');
+    throw new ApiError(
+      404,
+      'VARIANT_NOT_FOUND',
+      'Không tìm thấy biến thể sản phẩm'
+    );
   }
 
   const cart = await prisma.cart.upsert({
-    where: { userId_brandSlug: { userId: req.user.id, brandSlug: req.brand.slug } },
-    create: { userId: req.user.id, brandSlug: req.brand.slug },
+    where: {
+      userId_brandSlug: {
+        userId: req.user.id,
+        brandSlug: req.brand.slug,
+      },
+    },
+    create: {
+      userId: req.user.id,
+      brandSlug: req.brand.slug,
+    },
     update: {},
   });
 
   const item = await prisma.cartItem.upsert({
-    where: { cartId_variantId: { cartId: cart.id, variantId } },
-    create: { cartId: cart.id, variantId, quantity },
-    update: { quantity: { increment: quantity } },
+    where: {
+      cartId_variantId: {
+        cartId: cart.id,
+        variantId,
+      },
+    },
+    create: {
+      cartId: cart.id,
+      variantId,
+      quantity,
+    },
+    update: {
+      quantity: {
+        increment: quantity,
+      },
+    },
   });
 
   const available = variant.stockQuantity - variant.reservedQuantity;
+
   const warning = item.quantity > available ? 'INSUFFICIENT_STOCK' : null;
 
-  sendSuccess(res, { id: item.id, quantity: item.quantity, available, warning }, null, 201);
+  sendSuccess(
+    res,
+    {
+      id: item.id,
+      quantity: item.quantity,
+      available,
+      warning,
+    },
+    null,
+    201
+  );
 });
 
-// Sets a line to an exact quantity, used by the stepper control in the cart page. The line is
-// fetched through its cart so a crafted id belonging to somebody else's cart answers 404 rather
-// than letting one customer edit another's basket. Quantity is replaced, not incremented, because
-// the client sends the value it wants to end up with; incrementing here would double up whenever a
-// request is retried after a flaky connection.
+/**
+ * Cập nhật số lượng của một sản phẩm trong giỏ hàng.
+ * - Được gọi khi người dùng bấm tăng/giảm số lượng trên giao diện giỏ hàng.
+ * - Kiểm tra quyền sở hữu giỏ hàng của chính người dùng.
+ * - Cập nhật số lượng cụ thể và trả về cảnh báo nếu vượt quá tồn kho khả dụng.
+ */
 export const updateItem = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
+  if (!req.user || !req.brand) {
+    throw new ApiError(
+      401,
+      'UNAUTHENTICATED',
+      'Chưa xác thực'
+    );
+  }
+
   const { quantity } = req.body;
 
   const id = req.params.id as string;
-  const item = await prisma.cartItem.findFirst({
-    where: { id, cart: { userId: req.user.id, brandSlug: req.brand.slug } },
-    include: { variant: true },
-  });
-  if (!item) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Không tìm thấy sản phẩm trong giỏ');
 
-  const updated = await prisma.cartItem.update({ where: { id: item.id }, data: { quantity } });
+  const item = await prisma.cartItem.findFirst({
+    where: {
+      id,
+      cart: {
+        userId: req.user.id,
+        brandSlug: req.brand.slug,
+      },
+    },
+    include: {
+      variant: true,
+    },
+  });
+
+  if (!item) {
+    throw new ApiError(
+      404,
+      'CART_ITEM_NOT_FOUND',
+      'Không tìm thấy sản phẩm trong giỏ'
+    );
+  }
+
+  const updated = await prisma.cartItem.update({
+    where: { id: item.id },
+    data: { quantity },
+  });
 
   const available = item.variant.stockQuantity - item.variant.reservedQuantity;
+
   const warning = updated.quantity > available ? 'INSUFFICIENT_STOCK' : null;
 
-  sendSuccess(res, { id: updated.id, quantity: updated.quantity, available, warning });
-});
-
-// Removes one line from the cart. Like `updateItem`, the lookup is scoped to the caller's own cart
-// so the id alone is not enough to delete somebody else's line. Deleting the last item leaves an
-// empty cart row rather than removing it, which keeps the next `addItem` from having to recreate
-// one and costs a single unused row per user.
-export const removeItem = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user || !req.brand) throw new ApiError(401, 'UNAUTHENTICATED', 'Chưa xác thực');
-  const id = req.params.id as string;
-  const item = await prisma.cartItem.findFirst({
-    where: { id, cart: { userId: req.user.id, brandSlug: req.brand.slug } },
+  sendSuccess(res, {
+    id: updated.id,
+    quantity: updated.quantity,
+    available,
+    warning,
   });
-  if (!item) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Không tìm thấy sản phẩm trong giỏ');
-
-  await prisma.cartItem.delete({ where: { id: item.id } });
-  sendSuccess(res, { message: 'Đã xoá khỏi giỏ hàng' });
 });
 
-export default { getCart, addItem, updateItem, removeItem };
+/**
+ * Xóa một sản phẩm khỏi giỏ hàng.
+ * - Chỉ xóa khi sản phẩm thuộc về giỏ hàng của chính người dùng đang đăng nhập.
+ */
+export const removeItem = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || !req.brand) {
+    throw new ApiError(
+      401,
+      'UNAUTHENTICATED',
+      'Chưa xác thực'
+    );
+  }
+
+  const id = req.params.id as string;
+
+  const item = await prisma.cartItem.findFirst({
+    where: {
+      id,
+      cart: {
+        userId: req.user.id,
+        brandSlug: req.brand.slug,
+      },
+    },
+  });
+
+  if (!item) {
+    throw new ApiError(
+      404,
+      'CART_ITEM_NOT_FOUND',
+      'Không tìm thấy sản phẩm trong giỏ'
+    );
+  }
+
+  await prisma.cartItem.delete({
+    where: { id: item.id },
+  });
+
+  sendSuccess(res, {
+    message: 'Đã xoá khỏi giỏ hàng',
+  });
+});
+
+export default {
+  getCart,
+  addItem,
+  updateItem,
+  removeItem,
+};

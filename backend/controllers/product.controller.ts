@@ -1,45 +1,71 @@
 import type { Request, Response } from 'express';
+
 import type { Prisma } from '@prisma/client';
+
 import prisma from '../services/prisma';
+
 import ApiError from '../utils/ApiError';
+
 import asyncHandler from '../utils/asyncHandler';
+
 import { sendSuccess } from '../utils/ApiResponse';
+
 import { PRODUCT_STATUS } from '../constants/product';
 
-// Every read and write path for products, serving both the storefront and the admin dashboard.
-// A product is a catalogue entry; the sellable things with a price and a stock count are its
-// variants. Public listings expose only `active` products, and like blog and gallery they can be
-// scoped to one brand's category tree because a single backend serves several storefronts.
-
-// Returns the paginated list of products a visitor may see, ordered newest first, with pagination
-// counters in `meta`. Only `active` products appear — drafts and archived rows stay hidden without
-// a separate permission check, because the filter lives in the query itself. `pageSize` is capped
-// at 50 so a crafted request cannot pull the whole catalogue in one call. The category filter
-// expands to include child categories, otherwise a product filed under "Bình gốm" would be missing
-// from the parent brand's listing.
+/**
+ * Lấy danh sách sản phẩm công khai cho khách hàng xem trên website.
+ * - Chỉ lấy sản phẩm có trạng thái active (đang mở bán).
+ * - Sắp xếp sản phẩm mới nhất lên đầu (createdAt giảm dần).
+ * - Mở rộng lọc danh mục cho cả danh mục con của thương hiệu.
+ * - Eager-load kèm thông tin danh mục, danh sách ảnh (theo vị trí) và biến thể (theo giá tăng dần).
+ */
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const { page = '1', pageSize = '12', categorySlug } = req.query;
+
   const take = Math.min(Number(pageSize) || 12, 50);
+
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-  const where: Prisma.ProductWhereInput = { status: PRODUCT_STATUS.ACTIVE };
+  const where: Prisma.ProductWhereInput = {
+    status: PRODUCT_STATUS.ACTIVE,
+  };
 
   if (categorySlug && typeof categorySlug === 'string') {
-    const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
-    if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
-    const children = await prisma.category.findMany({ where: { parentId: category.id } });
+    const category = await prisma.category.findUnique({
+      where: { slug: categorySlug },
+    });
+
+    if (!category) {
+      throw new ApiError(
+        404,
+        'CATEGORY_NOT_FOUND',
+        'Không tìm thấy danh mục'
+      );
+    }
+
+    const children = await prisma.category.findMany({
+      where: { parentId: category.id },
+    });
+
     const categoryIds = [category.id, ...children.map((c) => c.id)];
+
     where.categoryId = { in: categoryIds };
   }
 
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
         category: true,
-        images: { orderBy: { position: 'asc' } },
-        variants: { orderBy: { price: 'asc' } },
+        images: {
+          orderBy: { position: 'asc' },
+        },
+        variants: {
+          orderBy: { price: 'asc' },
+        },
       },
       skip,
       take,
@@ -47,61 +73,112 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     prisma.product.count({ where }),
   ]);
 
-  sendSuccess(res, items, { page: Number(page), pageSize: take, total });
+  sendSuccess(res, items, {
+    page: Number(page),
+    pageSize: take,
+    total,
+  });
 });
 
-// Fetches one product by slug for the public detail page, including its category, images and
-// variants. A product that is not `active` is reported as 404 rather than 403, so an outsider
-// cannot probe the catalogue to learn that an unreleased product exists at a given URL. Variants
-// come back sorted by price so the storefront can show "từ <giá thấp nhất>" without sorting again,
-// and images by `position` so the admin's chosen order is what visitors see.
+/**
+ * Lấy thông tin chi tiết một sản phẩm theo đường dẫn tĩnh (slug).
+ * - Bắt buộc sản phẩm phải ở trạng thái active (nếu là draft hoặc archived sẽ trả về 404).
+ * - Kèm theo các thông số kỹ thuật động của danh mục (CategoryAttribute).
+ */
 export const getBySlug = asyncHandler(async (req: Request, res: Response) => {
   const slug = req.params.slug as string;
+
   const product = await prisma.product.findUnique({
     where: { slug },
     include: {
-      category: { include: { attributes: { orderBy: { attributeLabel: 'asc' } } } },
-      images: { orderBy: { position: 'asc' } },
-      variants: { orderBy: { price: 'asc' } },
+      category: {
+        include: {
+          attributes: {
+            orderBy: { attributeLabel: 'asc' },
+          },
+        },
+      },
+      images: {
+        orderBy: { position: 'asc' },
+      },
+      variants: {
+        orderBy: { price: 'asc' },
+      },
     },
   });
 
   if (!product || product.status !== PRODUCT_STATUS.ACTIVE) {
-    throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
+    throw new ApiError(
+      404,
+      'PRODUCT_NOT_FOUND',
+      'Không tìm thấy sản phẩm'
+    );
   }
 
   sendSuccess(res, product);
 });
 
-// Admin-only listing that, unlike `list`, also returns drafts and archived products so the editor
-// can find work in progress. It supports a case-insensitive `search` on the name and an optional
-// `status` filter. The `categorySlug` filter matters just as much here as on the public side:
-// leaving it out is what would let one brand's dashboard display the other brand's catalogue.
+/**
+ * Lấy danh sách sản phẩm dành cho quản trị viên (Admin Dashboard).
+ * - Hiển thị toàn bộ trạng thái (draft, active, archived).
+ * - Hỗ trợ tìm kiếm theo tên sản phẩm (search) và lọc theo status, categorySlug.
+ */
 export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const { page = '1', pageSize = '20', status, categorySlug, search } = req.query;
+
   const take = Math.min(Number(pageSize) || 20, 100);
+
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
   const where: Prisma.ProductWhereInput = {};
-  if (status && typeof status === 'string') where.status = status;
-  if (search && typeof search === 'string') where.name = { contains: search, mode: 'insensitive' };
+
+  if (status && typeof status === 'string') {
+    where.status = status;
+  }
+
+  if (search && typeof search === 'string') {
+    where.name = {
+      contains: search,
+      mode: 'insensitive',
+    };
+  }
 
   if (categorySlug && typeof categorySlug === 'string') {
-    const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
-    if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
-    const children = await prisma.category.findMany({ where: { parentId: category.id } });
+    const category = await prisma.category.findUnique({
+      where: { slug: categorySlug },
+    });
+
+    if (!category) {
+      throw new ApiError(
+        404,
+        'CATEGORY_NOT_FOUND',
+        'Không tìm thấy danh mục'
+      );
+    }
+
+    const children = await prisma.category.findMany({
+      where: { parentId: category.id },
+    });
+
     const categoryIds = [category.id, ...children.map((c) => c.id)];
+
     where.categoryId = { in: categoryIds };
   }
 
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
         category: true,
-        images: { orderBy: { position: 'asc' } },
-        variants: { orderBy: { price: 'asc' } },
+        images: {
+          orderBy: { position: 'asc' },
+        },
+        variants: {
+          orderBy: { price: 'asc' },
+        },
       },
       skip,
       take,
@@ -109,15 +186,18 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
     prisma.product.count({ where }),
   ]);
 
-  sendSuccess(res, items, { page: Number(page), pageSize: take, total });
+  sendSuccess(res, items, {
+    page: Number(page),
+    pageSize: take,
+    total,
+  });
 });
 
-// Creates a product together with its variants and images in a single transaction, answering 201
-// with the full row. All three are written at once because a product with no variant has nothing
-// to sell — leaving it half-created would put a broken entry in the catalogue. The slug and every
-// SKU are checked for collisions before writing so a duplicate returns a clear 409 instead of a raw
-// Prisma constraint error, and `variantKey` falls back to the SKU so the compound unique index on
-// (productId, variantKey) always has a value to work with.
+/**
+ * Tạo mới một sản phẩm cùng các biến thể và danh sách hình ảnh trong một transaction.
+ * - Kiểm tra trùng lặp slug sản phẩm và mã SKU của từng biến thể.
+ * - Sử dụng createMany cho biến thể và hình ảnh để tối ưu tốc độ ghi DB.
+ */
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const {
     categoryId,
@@ -131,18 +211,53 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
     images = [],
   } = req.body;
 
-  const existingSlug = await prisma.product.findUnique({ where: { slug } });
-  if (existingSlug) throw new ApiError(409, 'SLUG_TAKEN', 'Slug đã tồn tại, vui lòng chọn slug khác');
+  const existingSlug = await prisma.product.findUnique({
+    where: { slug },
+  });
 
-  const category = await prisma.category.findUnique({ where: { id: categoryId } });
-  if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
+  if (existingSlug) {
+    throw new ApiError(
+      409,
+      'SLUG_TAKEN',
+      'Slug đã tồn tại, vui lòng chọn slug khác'
+    );
+  }
+
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
+  });
+
+  if (!category) {
+    throw new ApiError(
+      404,
+      'CATEGORY_NOT_FOUND',
+      'Không tìm thấy danh mục'
+    );
+  }
 
   const skus = variants.map((v: { sku: string }) => v.sku);
+
   if (new Set(skus).size !== skus.length) {
-    throw new ApiError(422, 'DUPLICATE_SKU', 'Các biến thể không được trùng SKU');
+    throw new ApiError(
+      422,
+      'DUPLICATE_SKU',
+      'Các biến thể không được trùng SKU'
+    );
   }
-  const takenSku = await prisma.productVariant.findFirst({ where: { sku: { in: skus } } });
-  if (takenSku) throw new ApiError(409, 'SKU_TAKEN', `SKU đã tồn tại: ${takenSku.sku}`);
+
+  const takenSku = await prisma.productVariant.findFirst({
+    where: {
+      sku: { in: skus },
+    },
+  });
+
+  if (takenSku) {
+    throw new ApiError(
+      409,
+      'SKU_TAKEN',
+      `SKU đã tồn tại: ${takenSku.sku}`
+    );
+  }
 
   const product = await prisma.$transaction(async (tx) => {
     const created = await tx.product.create({
@@ -187,8 +302,12 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
       where: { id: created.id },
       include: {
         category: true,
-        images: { orderBy: { position: 'asc' } },
-        variants: { orderBy: { price: 'asc' } },
+        images: {
+          orderBy: { position: 'asc' },
+        },
+        variants: {
+          orderBy: { price: 'asc' },
+        },
       },
     });
   });
@@ -196,37 +315,78 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, product, null, 201);
 });
 
-// Updates a product's own fields, accepting a partial body so the admin form can send only what
-// changed. Fields left `undefined` are stripped before the write, because handing them to Prisma
-// would overwrite good data with null. A changed slug is checked against other rows first — note
-// the `slug !== existing.slug` guard, without which saving a product untouched would collide with
-// itself and always fail. Variants and images are deliberately not editable here: they carry stock
-// and price, and mixing them into a general-purpose update is how a careless request silently
-// wipes inventory. They get their own endpoints later.
+/**
+ * Cập nhật thông tin cơ bản của sản phẩm.
+ * - Hỗ trợ cập nhật từng phần (tên, slug, mô tả, danh mục, thông số kỹ thuật động attributes).
+ * - Không cập nhật biến thể và kho hàng tại đây để đảm bảo an toàn dữ liệu.
+ */
 export const update = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const existing = await prisma.product.findUnique({ where: { id } });
-  if (!existing) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
 
-  const { categoryId, name, slug, description, brand, status, attributes } = req.body;
+  const existing = await prisma.product.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new ApiError(
+      404,
+      'PRODUCT_NOT_FOUND',
+      'Không tìm thấy sản phẩm'
+    );
+  }
+
+  const {
+    categoryId,
+    name,
+    slug,
+    description,
+    brand,
+    status,
+    attributes,
+  } = req.body;
 
   if (slug && slug !== existing.slug) {
-    const takenSlug = await prisma.product.findUnique({ where: { slug } });
-    if (takenSlug) throw new ApiError(409, 'SLUG_TAKEN', 'Slug đã tồn tại, vui lòng chọn slug khác');
+    const takenSlug = await prisma.product.findUnique({
+      where: { slug },
+    });
+
+    if (takenSlug) {
+      throw new ApiError(
+        409,
+        'SLUG_TAKEN',
+        'Slug đã tồn tại, vui lòng chọn slug khác'
+      );
+    }
   }
 
   if (categoryId && categoryId !== existing.categoryId) {
-    const category = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!category) throw new ApiError(404, 'CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục');
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+    });
+
+    if (!category) {
+      throw new ApiError(
+        404,
+        'CATEGORY_NOT_FOUND',
+        'Không tìm thấy danh mục'
+      );
+    }
   }
 
   const data: Prisma.ProductUpdateInput = {};
+
   if (categoryId) data.category = { connect: { id: categoryId } };
+
   if (name !== undefined) data.name = name;
+
   if (slug !== undefined) data.slug = slug;
+
   if (description !== undefined) data.description = description;
+
   if (brand !== undefined) data.brand = brand;
+
   if (status !== undefined) data.status = status;
+
   if (attributes !== undefined) data.attributes = attributes;
 
   const product = await prisma.product.update({
@@ -234,25 +394,43 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
     data,
     include: {
       category: true,
-      images: { orderBy: { position: 'asc' } },
-      variants: { orderBy: { price: 'asc' } },
+      images: {
+        orderBy: { position: 'asc' },
+      },
+      variants: {
+        orderBy: { price: 'asc' },
+      },
     },
   });
 
   sendSuccess(res, product);
 });
 
-// Updates one variant's price and stock. This lives apart from `update` on purpose: those fields
-// are the two most dangerous in the catalogue, and keeping them out of the general-purpose product
-// endpoint means a partial form submission can never blank out inventory as a side effect.
+/**
+ * Cập nhật giá và số lượng tồn kho của một biến thể sản phẩm.
+ * - Kiểm tra không cho phép đặt số lượng tồn kho thấp hơn số lượng đang giữ cho các đơn chờ thanh toán (reservedQuantity).
+ */
 export const updateVariant = asyncHandler(async (req: Request, res: Response) => {
   const variantId = req.params.variantId as string;
+
   const { price, compareAtPrice, stockQuantity, label } = req.body;
 
-  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
-  if (!variant) throw new ApiError(404, 'VARIANT_NOT_FOUND', 'Không tìm thấy biến thể');
+  const variant = await prisma.productVariant.findUnique({
+    where: { id: variantId },
+  });
 
-  if (stockQuantity !== undefined && stockQuantity < variant.reservedQuantity) {
+  if (!variant) {
+    throw new ApiError(
+      404,
+      'VARIANT_NOT_FOUND',
+      'Không tìm thấy biến thể'
+    );
+  }
+
+  if (
+    stockQuantity !== undefined &&
+    stockQuantity < variant.reservedQuantity
+  ) {
     throw new ApiError(
       409,
       'STOCK_BELOW_RESERVED',
@@ -261,28 +439,48 @@ export const updateVariant = asyncHandler(async (req: Request, res: Response) =>
   }
 
   const data: Prisma.ProductVariantUpdateInput = {};
+
   if (price !== undefined) data.price = price;
+
   if (compareAtPrice !== undefined) data.compareAtPrice = compareAtPrice;
+
   if (stockQuantity !== undefined) data.stockQuantity = stockQuantity;
+
   if (label !== undefined) {
-    const existingAttrs = (variant.variantAttributes as Record<string, any>) || {};
+    const existingAttrs =
+      (variant.variantAttributes as Record<string, any>) || {};
+
     data.variantAttributes = { ...existingAttrs, label };
   }
 
-  const updated = await prisma.productVariant.update({ where: { id: variant.id }, data });
+  const updated = await prisma.productVariant.update({
+    where: { id: variant.id },
+    data,
+  });
+
   sendSuccess(res, updated);
 });
 
-// Attaches an already-uploaded image to a product. The file itself goes to Cloudinary through
-// upload.controller.js first and arrives here as a URL, which keeps this endpoint free of any
-// file handling. New images land at the end of the order rather than the front, so adding a photo
-// never silently changes which one is the cover.
+/**
+ * Gán thêm một hình ảnh đã tải lên vào sản phẩm.
+ * - Tự động tính toán vị trí position tiếp theo để thêm vào cuối danh sách ảnh.
+ */
 export const addImage = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
+
   const { url, altText } = req.body;
 
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
+  const product = await prisma.product.findUnique({
+    where: { id },
+  });
+
+  if (!product) {
+    throw new ApiError(
+      404,
+      'PRODUCT_NOT_FOUND',
+      'Không tìm thấy sản phẩm'
+    );
+  }
 
   const last = await prisma.productImage.findFirst({
     where: { productId: product.id },
@@ -301,58 +499,134 @@ export const addImage = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, image, null, 201);
 });
 
-// Edits an image's alt text or moves it in the order.
+/**
+ * Cập nhật altText hoặc thay đổi thứ tự (position) hiển thị của một bức ảnh.
+ */
 export const updateImage = asyncHandler(async (req: Request, res: Response) => {
   const imageId = req.params.imageId as string;
+
   const { altText, position } = req.body;
 
-  const existing = await prisma.productImage.findUnique({ where: { id: imageId } });
-  if (!existing) throw new ApiError(404, 'IMAGE_NOT_FOUND', 'Không tìm thấy ảnh');
+  const existing = await prisma.productImage.findUnique({
+    where: { id: imageId },
+  });
+
+  if (!existing) {
+    throw new ApiError(
+      404,
+      'IMAGE_NOT_FOUND',
+      'Không tìm thấy ảnh'
+    );
+  }
 
   const data: Prisma.ProductImageUpdateInput = {};
+
   if (altText !== undefined) data.altText = altText;
+
   if (position !== undefined) data.position = position;
 
-  const updated = await prisma.productImage.update({ where: { id: existing.id }, data });
+  const updated = await prisma.productImage.update({
+    where: { id: existing.id },
+    data,
+  });
+
   sendSuccess(res, updated);
 });
 
-// Detaches an image from a product.
+/**
+ * Gỡ bỏ một hình ảnh khỏi sản phẩm.
+ */
 export const removeImage = asyncHandler(async (req: Request, res: Response) => {
   const imageId = req.params.imageId as string;
-  const existing = await prisma.productImage.findUnique({ where: { id: imageId } });
-  if (!existing) throw new ApiError(404, 'IMAGE_NOT_FOUND', 'Không tìm thấy ảnh');
 
-  await prisma.productImage.delete({ where: { id: existing.id } });
-  sendSuccess(res, { message: 'Đã xoá ảnh' });
+  const existing = await prisma.productImage.findUnique({
+    where: { id: imageId },
+  });
+
+  if (!existing) {
+    throw new ApiError(
+      404,
+      'IMAGE_NOT_FOUND',
+      'Không tìm thấy ảnh'
+    );
+  }
+
+  await prisma.productImage.delete({
+    where: { id: existing.id },
+  });
+
+  sendSuccess(res, {
+    message: 'Đã xoá ảnh',
+  });
 });
 
-// Permanently deletes a product along with its variants and images.
+/**
+ * Xóa vĩnh viễn một sản phẩm cùng toàn bộ hình ảnh và các biến thể liên quan trong một transaction.
+ */
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
 
-  const existing = await prisma.product.findUnique({ where: { id } });
-  if (!existing) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
+  const existing = await prisma.product.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new ApiError(
+      404,
+      'PRODUCT_NOT_FOUND',
+      'Không tìm thấy sản phẩm'
+    );
+  }
 
   await prisma.$transaction([
-    prisma.productImage.deleteMany({ where: { productId: id } }),
-    prisma.productVariant.deleteMany({ where: { productId: id } }),
-    prisma.product.delete({ where: { id } }),
+    prisma.productImage.deleteMany({
+      where: { productId: id },
+    }),
+    prisma.productVariant.deleteMany({
+      where: { productId: id },
+    }),
+    prisma.product.delete({
+      where: { id },
+    }),
   ]);
 
-  sendSuccess(res, { message: 'Đã xoá sản phẩm' });
+  sendSuccess(res, {
+    message: 'Đã xoá sản phẩm',
+  });
 });
 
-// Adds a new variant to an existing product.
+/**
+ * Thêm một biến thể mới cho một sản phẩm đã có.
+ * - Kiểm tra tính duy nhất của mã SKU.
+ */
 export const addVariant = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
+
   const { sku, price, compareAtPrice, stockQuantity, label } = req.body;
 
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
+  const product = await prisma.product.findUnique({
+    where: { id },
+  });
 
-  const existingSku = await prisma.productVariant.findUnique({ where: { sku } });
-  if (existingSku) throw new ApiError(409, 'SKU_TAKEN', `SKU đã tồn tại: ${sku}`);
+  if (!product) {
+    throw new ApiError(
+      404,
+      'PRODUCT_NOT_FOUND',
+      'Không tìm thấy sản phẩm'
+    );
+  }
+
+  const existingSku = await prisma.productVariant.findUnique({
+    where: { sku },
+  });
+
+  if (existingSku) {
+    throw new ApiError(
+      409,
+      'SKU_TAKEN',
+      `SKU đã tồn tại: ${sku}`
+    );
+  }
 
   const variantAttributes = label ? { label } : {};
 
@@ -364,28 +638,53 @@ export const addVariant = asyncHandler(async (req: Request, res: Response) => {
       compareAtPrice: compareAtPrice || null,
       stockQuantity: stockQuantity || 0,
       variantAttributes,
-      variantKey: sku, // Use SKU as variantKey to satisfy constraints
-    }
+      variantKey: sku,
+    },
   });
 
   sendSuccess(res, variant, null, 201);
 });
 
-// Removes a variant. Ensures that at least one variant remains.
+/**
+ * Xóa một biến thể sản phẩm.
+ * - Đảm bảo ràng buộc nghiệp vụ: Mỗi sản phẩm bắt buộc phải có ít nhất một biến thể (không cho xóa biến thể cuối cùng).
+ */
 export const removeVariant = asyncHandler(async (req: Request, res: Response) => {
   const variantId = req.params.variantId as string;
 
-  const existing = await prisma.productVariant.findUnique({ where: { id: variantId } });
-  if (!existing) throw new ApiError(404, 'VARIANT_NOT_FOUND', 'Không tìm thấy biến thể');
+  const existing = await prisma.productVariant.findUnique({
+    where: { id: variantId },
+  });
 
-  // Prevent deleting if it's the last variant
-  const variantCount = await prisma.productVariant.count({ where: { productId: existing.productId } });
-  if (variantCount <= 1) {
-    throw new ApiError(400, 'LAST_VARIANT', 'Không thể xóa biến thể duy nhất của sản phẩm. Một sản phẩm phải có ít nhất một biến thể.');
+  if (!existing) {
+    throw new ApiError(
+      404,
+      'VARIANT_NOT_FOUND',
+      'Không tìm thấy biến thể'
+    );
   }
 
-  await prisma.productVariant.delete({ where: { id: variantId } });
-  sendSuccess(res, { message: 'Đã xóa biến thể' });
+  const variantCount = await prisma.productVariant.count({
+    where: {
+      productId: existing.productId,
+    },
+  });
+
+  if (variantCount <= 1) {
+    throw new ApiError(
+      400,
+      'LAST_VARIANT',
+      'Không thể xóa biến thể duy nhất của sản phẩm. Một sản phẩm phải có ít nhất một biến thể.'
+    );
+  }
+
+  await prisma.productVariant.delete({
+    where: { id: variantId },
+  });
+
+  sendSuccess(res, {
+    message: 'Đã xóa biến thể',
+  });
 });
 
 export default {

@@ -1,4 +1,3 @@
-
 import type { Request, Response } from 'express';
 
 import bcrypt from 'bcryptjs';
@@ -21,6 +20,12 @@ import ApiError from '../utils/ApiError';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+/**
+ * Đăng ký tài khoản khách hàng mới (customer).
+ * - Kiểm tra email đã tồn tại trong hệ thống chưa (tránh trùng lặp).
+ * - Mã hóa mật khẩu an toàn với thuật toán bcrypt (cost 10).
+ * - Tạo user trong cơ sở dữ liệu và tự động đăng nhập (cấp Access Token + Refresh Token).
+ */
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
 
@@ -28,12 +33,13 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     where: { email },
   });
 
-  if (existing)
+  if (existing) {
     throw new ApiError(
       409,
       'EMAIL_TAKEN',
       'Email này đã được đăng ký'
     );
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -70,6 +76,12 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
+/**
+ * Đăng nhập người dùng bằng email và mật khẩu.
+ * - Tìm user theo email.
+ * - So sánh mật khẩu người dùng gửi lên với passwordHash trong DB.
+ * - Nếu đúng, sinh Access Token (JWT ngắn hạn) và Refresh Token (dài hạn lưu trong DB).
+ */
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -77,21 +89,23 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     where: { email },
   });
 
-  if (!user)
+  if (!user) {
     throw new ApiError(
       401,
       'INVALID_CREDENTIALS',
       'Email hoặc mật khẩu không đúng'
     );
+  }
 
   const match = await bcrypt.compare(password, user.passwordHash);
 
-  if (!match)
+  if (!match) {
     throw new ApiError(
       401,
       'INVALID_CREDENTIALS',
       'Email hoặc mật khẩu không đúng'
     );
+  }
 
   const accessToken = signAccessToken({
     sub: user.id,
@@ -112,15 +126,22 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Cấp mới Access Token khi token cũ hết hạn (Refresh Token Rotation).
+ * - Kiểm tra tính hợp lệ của Refresh Token gửi lên.
+ * - Thu hồi Refresh Token cũ và phát hành Refresh Token mới (chống lộ token).
+ * - Cấp lại Access Token mới cho client tiếp tục phiên làm việc.
+ */
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
 
-  if (!refreshToken)
+  if (!refreshToken) {
     throw new ApiError(
       401,
       'NO_REFRESH_TOKEN',
       'Refresh token không được cung cấp'
     );
+  }
 
   const rotated = await rotateRefreshToken(refreshToken);
 
@@ -136,12 +157,13 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     where: { id: rotated.userId },
   });
 
-  if (!user)
+  if (!user) {
     throw new ApiError(
       404,
       'USER_NOT_FOUND',
       'Không tìm thấy người dùng'
     );
+  }
 
   const accessToken = signAccessToken({
     sub: user.id,
@@ -154,27 +176,31 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Lấy thông tin tài khoản của người dùng đang đăng nhập.
+ * - Đọc thông tin userId từ middleware xác thực (authenticate).
+ * - Truy vấn thông tin user trong DB và trả về cho client.
+ */
 export const me = asyncHandler(async (req: Request, res: Response) => {
-  // authenticate gán req.user = { id, role } chứ không giữ nguyên payload JWT, nên phải đọc
-  // .id. Đọc .sub thì luôn nhận undefined và Prisma ném lỗi -> endpoint 500 với mọi token.
-
-  if (!req.user)
+  if (!req.user) {
     throw new ApiError(
       401,
       'UNAUTHENTICATED',
       'Chưa đăng nhập'
     );
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
   });
 
-  if (!user)
+  if (!user) {
     throw new ApiError(
       404,
       'USER_NOT_FOUND',
       'Không tìm thấy người dùng'
     );
+  }
 
   sendSuccess(res, {
     id: user.id,
@@ -184,6 +210,12 @@ export const me = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Gửi yêu cầu đặt lại mật khẩu khi người dùng quên mật khẩu.
+ * - Kiểm tra sự tồn tại của email (nếu không có thì vẫn trả về thông báo chung để chống dò email).
+ * - Tạo mã token ngẫu nhiên (32 bytes), lưu bản băm SHA-256 vào bảng PasswordResetToken (hết hạn sau 1h).
+ * - Sinh đường dẫn đặt lại mật khẩu để gửi cho khách.
+ */
 export const requestPasswordReset = asyncHandler(
   async (req: Request, res: Response) => {
     const { email } = req.body;
@@ -227,6 +259,12 @@ export const requestPasswordReset = asyncHandler(
   }
 );
 
+/**
+ * Đặt lại mật khẩu mới bằng token xác thực.
+ * - Kiểm tra tính hợp lệ và thời hạn của token trong bảng PasswordResetToken.
+ * - Mã hóa mật khẩu mới và cập nhật vào bảng User.
+ * - Xóa token đã dùng để tránh việc tái sử dụng.
+ */
 export const resetPassword = asyncHandler(
   async (req: Request, res: Response) => {
     const { email, token, newPassword } = req.body;
@@ -235,12 +273,13 @@ export const resetPassword = asyncHandler(
       where: { email },
     });
 
-    if (!user)
+    if (!user) {
       throw new ApiError(
         400,
         'INVALID_REQUEST',
         'Email không hợp lệ'
       );
+    }
 
     const tokenHash = crypto
       .createHash('sha256')
@@ -284,6 +323,10 @@ export const resetPassword = asyncHandler(
   }
 );
 
+/**
+ * Đăng xuất người dùng.
+ * - Thu hồi (revoke) Refresh Token hiện tại trong cơ sở dữ liệu để vô hiệu hóa phiên đăng nhập.
+ */
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
 
@@ -305,4 +348,3 @@ export default {
   requestPasswordReset,
   resetPassword,
 };
-
