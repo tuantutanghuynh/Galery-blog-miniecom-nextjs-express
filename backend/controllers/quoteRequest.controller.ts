@@ -20,6 +20,11 @@ export type QuoteStatus = (typeof QUOTE_STATUS)[keyof typeof QUOTE_STATUS];
 
 const MAX_ITEMS = 50;
 
+interface QuoteRequestItemInput {
+  variantId?: string;
+  quantity?: number | string;
+}
+
 /**
  * Tiếp nhận yêu cầu tư vấn mua hàng từ khách (Lead / Báo giá).
  * - Khách chọn sản phẩm, để lại số điện thoại/địa chỉ để nhân viên gọi lại tư vấn.
@@ -73,8 +78,12 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const variantIds = [
-    ...new Set(items.map((i: any) => i.variantId).filter(Boolean)),
-  ] as string[];
+    ...new Set(
+      items
+        .map((i: QuoteRequestItemInput) => i.variantId)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
 
   if (variantIds.length === 0) {
     throw new ApiError(
@@ -103,21 +112,29 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
   const byId = new Map(variants.map((v) => [v.id, v]));
 
   const snapshot = items
-    .map((raw: any) => {
+    .map((raw: QuoteRequestItemInput) => {
+      if (!raw.variantId) return null;
+
       const variant = byId.get(raw.variantId);
 
       if (!variant) return null;
 
       const quantity = Math.min(Math.max(Number(raw.quantity) || 1, 1), 99);
 
-      const variantAttrs = (variant.variantAttributes as Record<string, any>) || {};
+      const variantAttrs =
+        (variant.variantAttributes as Record<string, unknown>) || {};
+
+      const label =
+        typeof variantAttrs.label === 'string'
+          ? variantAttrs.label
+          : variant.sku;
 
       return {
         variantId: variant.id,
         sku: variant.sku,
         productName: variant.product.name,
         productSlug: variant.product.slug,
-        variantLabel: variantAttrs?.label || variant.sku,
+        variantLabel: label,
         unitPrice: variant.price,
         quantity,
         lineTotal: variant.price * quantity,

@@ -12,6 +12,22 @@ import { sendSuccess } from '../utils/ApiResponse';
 
 import { PRODUCT_STATUS } from '../constants/product';
 
+interface CreateProductVariantInput {
+  sku: string;
+  price: number;
+  compareAtPrice?: number | null;
+  stockQuantity?: number;
+  variantAttributes?: Prisma.InputJsonValue;
+  variantKey?: string;
+  imageUrl?: string | null;
+}
+
+interface CreateProductImageInput {
+  url: string;
+  altText?: string | null;
+  position?: number;
+}
+
 /**
  * Lấy danh sách sản phẩm công khai cho khách hàng xem trên website.
  * - Chỉ lấy sản phẩm có trạng thái active (đang mở bán).
@@ -274,7 +290,7 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 
     if (variants.length) {
       await tx.productVariant.createMany({
-        data: variants.map((v: any) => ({
+        data: variants.map((v: CreateProductVariantInput) => ({
           productId: created.id,
           sku: v.sku,
           price: v.price,
@@ -289,7 +305,7 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 
     if (images.length) {
       await tx.productImage.createMany({
-        data: images.map((img: any, index: number) => ({
+        data: images.map((img: CreateProductImageInput, index: number) => ({
           productId: created.id,
           url: img.url,
           altText: img.altText ?? null,
@@ -448,7 +464,7 @@ export const updateVariant = asyncHandler(async (req: Request, res: Response) =>
 
   if (label !== undefined) {
     const existingAttrs =
-      (variant.variantAttributes as Record<string, any>) || {};
+      (variant.variantAttributes as Record<string, unknown>) || {};
 
     data.variantAttributes = { ...existingAttrs, label };
   }

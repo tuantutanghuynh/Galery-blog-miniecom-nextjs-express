@@ -1,39 +1,76 @@
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
+
 import { jwtAccessSecret, jwtRefreshSecret } from '../config/env';
 
-export type AccessPayload = { sub: string; role: string };
+export type AccessPayload = {
+  sub: string;
+  role: string;
+};
+
+export interface AccessTokenPayload extends JwtPayload {
+  sub: string;
+  role: string;
+}
 
 const ACCESS_TOKEN_TTL: SignOptions['expiresIn'] = '15m';
+
 const REFRESH_TOKEN_TTL: SignOptions['expiresIn'] = '7d';
 
-// Signs a payload — `{ sub, role }` in this project — into an access token valid for 15
-// minutes. The TTL is deliberately short because a stateless JWT cannot be revoked once
-// issued: a stolen token stays usable until it expires, so the window is kept small and the
-// refresh-token rotation in token.service.js handles long-lived sessions instead. Keeping
-// the role inside the payload lets requireRole authorise a request without a database read.
+/**
+ * Ký và sinh Access Token (JWT) ngắn hạn (15 phút).
+ * - Chứa payload { sub: userId, role: userRole }.
+ * - Dùng để xác thực các request API cần đăng nhập mà không cần truy vấn DB liên tục.
+ */
 export function signAccessToken(payload: AccessPayload): string {
-    if (!jwtAccessSecret) throw new Error('Thiếu JWT_ACCESS_SECRET');
-    return jwt.sign(payload, jwtAccessSecret, { expiresIn: ACCESS_TOKEN_TTL });
+  if (!jwtAccessSecret) {
+    throw new Error('Thiếu JWT_ACCESS_SECRET');
+  }
+
+  return jwt.sign(payload, jwtAccessSecret, {
+    expiresIn: ACCESS_TOKEN_TTL,
+  });
 }
 
-// Verifies a token's signature and expiry and returns its decoded payload. It deliberately
-// does not catch anything: `jsonwebtoken` throws `TokenExpiredError` or `JsonWebTokenError`
-// on failure, and the caller — middlewares/authenticate.js — converts both into the same
-// 401 so the client cannot distinguish an expired token from a forged one. Callers must
-// therefore always wrap this in try/catch rather than checking a return value.
-export function verifyAccessToken(token: string): JwtPayload {
-    if (!jwtAccessSecret) throw new Error('Thiếu JWT_ACCESS_SECRET');
-    return jwt.verify(token, jwtAccessSecret) as JwtPayload;
+/**
+ * Xác thực tính hợp lệ và giải mã Access Token.
+ * - Trả về payload dạng `AccessTokenPayload` chứa sub (userId) và role.
+ * - Ném lỗi nếu token bị hết hạn hoặc chữ ký bị sửa đổi.
+ */
+export function verifyAccessToken(token: string): AccessTokenPayload {
+  if (!jwtAccessSecret) {
+    throw new Error('Thiếu JWT_ACCESS_SECRET');
+  }
+
+  return jwt.verify(token, jwtAccessSecret) as AccessTokenPayload;
 }
 
+/**
+ * Ký và sinh Refresh Token dạng JWT (nếu dùng cơ chế JWT refresh).
+ */
 export function signRefreshToken(payload: AccessPayload): string {
-    if (!jwtRefreshSecret) throw new Error('Thiếu JWT_REFRESH_SALT');
-    return jwt.sign(payload, jwtRefreshSecret, { expiresIn: REFRESH_TOKEN_TTL });
+  if (!jwtRefreshSecret) {
+    throw new Error('Thiếu JWT_REFRESH_SALT');
+  }
+
+  return jwt.sign(payload, jwtRefreshSecret, {
+    expiresIn: REFRESH_TOKEN_TTL,
+  });
 }
 
+/**
+ * Xác thực tính hợp lệ của Refresh Token.
+ */
 export function verifyRefreshToken(token: string): JwtPayload {
-    if (!jwtRefreshSecret) throw new Error('Thiếu JWT_REFRESH_SALT');
-    return jwt.verify(token, jwtRefreshSecret) as JwtPayload;
+  if (!jwtRefreshSecret) {
+    throw new Error('Thiếu JWT_REFRESH_SALT');
+  }
+
+  return jwt.verify(token, jwtRefreshSecret) as JwtPayload;
 }
 
-export default { signAccessToken, verifyAccessToken, signRefreshToken, verifyRefreshToken };
+export default {
+  signAccessToken,
+  verifyAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+};

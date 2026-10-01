@@ -14,7 +14,7 @@ const contactLimiter = rateLimit({
     status: 'error',
     code: 'RATE_LIMIT_EXCEEDED',
     message: 'Bạn đã gửi quá nhiều tin nhắn. Vui lòng thử lại sau 15 phút.'
-  } as any
+  }
 });
 
 // Khách truy cập gửi form (Public)

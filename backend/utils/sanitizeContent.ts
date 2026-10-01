@@ -18,7 +18,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
     'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'sub', 'sup',
     'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'hr',
     'a', 'img', 'iframe',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td'
   ],
 
   allowedAttributes: {

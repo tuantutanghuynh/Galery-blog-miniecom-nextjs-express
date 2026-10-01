@@ -21,7 +21,7 @@ const submitLimiter = rateLimit({
     status: 'error',
     code: 'RATE_LIMIT_EXCEEDED',
     message: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.',
-  } as any,
+  },
 });
 
 router.post('/', submitLimiter, optionalAuthenticate, ctrl.submit);
