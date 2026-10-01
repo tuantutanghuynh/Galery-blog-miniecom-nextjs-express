@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import '../instrument';
 import app from '../app';
 import { port } from '../config/env';
 import { startExpiredOrderSweeper } from '../workers/releaseExpiredOrders';
