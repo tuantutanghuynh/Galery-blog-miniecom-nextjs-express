@@ -47,7 +47,20 @@ if (dsn) {
     ],
   });
 
-  console.log('[sentry] Đã bật giám sát lỗi');
+  // `Sentry.init` không ném lỗi khi DSN sai, nó chỉ âm thầm tự tắt. Nên không thể in "đã bật"
+  // chỉ vì biến có giá trị: phải hỏi lại SDK xem nó có thật sự hiểu được DSN này không.
+  if (Sentry.getClient()?.getDsn()) {
+    console.log('[sentry] Đã bật giám sát lỗi');
+  } else {
+    // Lỗi hay gặp nhất là dán cả dấu nháy vào ô giá trị trên dashboard: file .env tự bóc dấu
+    // nháy nhờ dotenv, còn dashboard thì giữ nguyên nên SDK nhận chuỗi bắt đầu bằng `"`.
+    // Chỉ in gợi ý chứ không in DSN ra log, vì đó là giá trị cấu hình không nên lộ.
+    const coDauNhay = /^["']|["']$/.test(dsn.trim());
+    console.warn(
+      '[sentry] SENTRY_DSN có giá trị nhưng SDK không chấp nhận — lỗi sẽ KHÔNG được báo về Sentry.' +
+        (coDauNhay ? ' Giá trị đang có dấu nháy ở đầu hoặc cuối, hãy bỏ chúng đi.' : '')
+    );
+  }
 } else {
   console.warn('[sentry] Thiếu SENTRY_DSN — lỗi sẽ KHÔNG được báo về Sentry');
 }
