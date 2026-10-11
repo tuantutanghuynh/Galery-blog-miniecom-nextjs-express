@@ -271,6 +271,10 @@ export const requestPasswordReset = asyncHandler(
       })
       .catch((err: unknown) => {
         console.error('[mail] Gửi thư đặt lại mật khẩu thất bại:', err instanceof Error ? err.message : err);
+        // Ghi lại link để quản trị viên còn đường cứu tài khoản qua log của server khi thư
+        // không đi được. Không gửi link lên Sentry: Sentry là dịch vụ bên ngoài, còn log
+        // server chỉ chủ tài khoản hosting đọc được.
+        console.log(`[PASSWORD RESET] ${email}:\n${resetLink}`);
         Sentry.captureException(err);
       });
 

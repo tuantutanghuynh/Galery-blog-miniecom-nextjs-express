@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { passwordResetEmail, quoteShopEmail, quoteCustomerEmail } from './mailTemplates';
 import type { QuoteLine, QuoteSummary } from './mailTemplates';
 import { sendMail, escapeHtml, shopInbox } from './mail.service';
@@ -75,5 +75,42 @@ describe('sendMail khi chưa cấu hình SMTP', () => {
     process.env.SMTP_USER = 'shop@nghiaphai.com';
     delete process.env.SHOP_NOTIFY_EMAIL;
     expect(shopInbox()).toBe('shop@nghiaphai.com');
+  });
+});
+
+describe('sendMail qua Resend (RESEND_API_KEY có giá trị)', () => {
+  const saved = { key: process.env.RESEND_API_KEY, from: process.env.MAIL_FROM };
+  afterEach(() => {
+    process.env.RESEND_API_KEY = saved.key;
+    process.env.MAIL_FROM = saved.from;
+    if (saved.key === undefined) delete process.env.RESEND_API_KEY;
+    if (saved.from === undefined) delete process.env.MAIL_FROM;
+    vi.unstubAllGlobals();
+  });
+
+  it('gọi đúng API, đúng header, đúng tên trường reply_to', async () => {
+    process.env.RESEND_API_KEY = 're_test_123';
+    process.env.MAIL_FROM = 'Nghĩa Phái <canhnhut@nghiaphai.com>';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'x' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const ok = await sendMail(quoteShopEmail('shop@nghiaphai.com', quote, lines, 'u'));
+
+    expect(ok).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.resend.com/emails');
+    expect(init.headers.Authorization).toBe('Bearer re_test_123');
+    const body = JSON.parse(init.body);
+    expect(body.from).toBe('Nghĩa Phái <canhnhut@nghiaphai.com>');
+    expect(body.to).toBe('shop@nghiaphai.com');
+    expect(body.reply_to).toBe('khach@example.com');
+    expect(body).not.toHaveProperty('replyTo');
+  });
+
+  it('Resend từ chối thì ném lỗi có kèm lý do', async () => {
+    process.env.RESEND_API_KEY = 're_test_123';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"message":"The nghiaphai.com domain is not verified"}', { status: 403 })));
+
+    await expect(sendMail(passwordResetEmail('a@x.com', 'https://x'))).rejects.toThrow(/403.*not verified/);
   });
 });
