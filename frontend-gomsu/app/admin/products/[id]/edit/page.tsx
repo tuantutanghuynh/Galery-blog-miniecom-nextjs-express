@@ -66,10 +66,9 @@ export default function EditProductPage({ params }: PageProps) {
       setCategories(brand ? all.filter((c) => c.id === brand.id || c.parentId === brand.id) : all);
     });
 
-    // Không có endpoint lấy sản phẩm theo id cho admin, nên lấy từ danh sách admin rồi lọc ra.
-    // Dùng endpoint công khai theo slug sẽ không thấy được sản phẩm nháp — đúng thứ ta cần sửa.
-    authFetch<Product[]>(`/products/admin/list?categorySlug=${BRAND_CATEGORY_SLUG}&pageSize=200`).then((res) => {
-      const found = (res.data || []).find((p) => p.id === id);
+    // Endpoint admin trả cả sản phẩm nháp, thứ mà endpoint công khai theo slug ẩn đi.
+    authFetch<Product>(`/products/admin/${id}`).then((res) => {
+      const found = res.data;
       if (!found) return setErrorMsg('Không tìm thấy sản phẩm.');
       setProduct(found);
       setForm({

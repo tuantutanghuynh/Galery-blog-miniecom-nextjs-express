@@ -3,7 +3,6 @@ import { getImageUrl } from '@/lib/utils';
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { authFetch } from '@/lib/adminAuth';
-import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import { BlogPost } from '@/types/blog';
 
@@ -36,8 +35,10 @@ export default function EditPostPage({ params }: PageProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    authFetch<BlogPost[]>(`/blog/admin/list?categorySlug=${BRAND_CATEGORY_SLUG}`).then((res) => {
-      const post = res.data?.find((p) => p.id === id);
+    // Lấy đúng một bài theo id, kể cả bản nháp. Trước đây trang này tải cả danh sách admin rồi
+    // tự tìm, nên bài nằm ngoài trang đầu (bài thứ 21 trở đi) báo "Không tìm thấy bài viết".
+    authFetch<BlogPost>(`/blog/admin/${id}`).then((res) => {
+      const post = res.data;
       if (!post) {
         setErrorMsg('Không tìm thấy bài viết.');
         return;
