@@ -302,8 +302,7 @@ sequenceDiagram
 │   ├── app/                     Public routes, /admin, /auth, sitemap, robots, llms.txt
 │   ├── components/              home, product, contact, layout, admin, ui (incl. inline image editing)
 │   └── lib/                     API client, auth, quote list, JSON-LD, site URL, contact info
-├── assets/screenshots/          Images used in this README
-└── project-docs/                Architecture notes and design write-ups
+└── assets/screenshots/          Images used in this README
 ```
 
 ---
