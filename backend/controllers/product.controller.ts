@@ -10,6 +10,8 @@ import asyncHandler from '../utils/asyncHandler';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import { parsePagination } from '../utils/pagination';
+
 import { PRODUCT_STATUS } from '../constants/product';
 
 interface CreateProductVariantInput {
@@ -36,11 +38,9 @@ interface CreateProductImageInput {
  * - Eager-load kèm thông tin danh mục, danh sách ảnh (theo vị trí) và biến thể (theo giá tăng dần).
  */
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', pageSize = '12', categorySlug } = req.query;
+  const { categorySlug } = req.query;
 
-  const take = Math.min(Number(pageSize) || 12, 50);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 12, maxSize: 50 });
 
   const where: Prisma.ProductWhereInput = {
     status: PRODUCT_STATUS.ACTIVE,
@@ -71,9 +71,8 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         category: true,
         images: {
@@ -90,7 +89,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });
@@ -140,11 +139,9 @@ export const getBySlug = asyncHandler(async (req: Request, res: Response) => {
  * - Hỗ trợ tìm kiếm theo tên sản phẩm (search) và lọc theo status, categorySlug.
  */
 export const adminList = asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', pageSize = '20', status, categorySlug, search } = req.query;
+  const { status, categorySlug, search } = req.query;
 
-  const take = Math.min(Number(pageSize) || 20, 100);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 20, maxSize: 100 });
 
   const where: Prisma.ProductWhereInput = {};
 
@@ -184,9 +181,8 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         category: true,
         images: {
@@ -203,7 +199,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });

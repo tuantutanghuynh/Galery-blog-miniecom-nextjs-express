@@ -12,6 +12,8 @@ import asyncHandler from '../utils/asyncHandler';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import { parsePagination } from '../utils/pagination';
+
 /**
  * Lấy danh sách các hình ảnh trong bộ sưu tập Gallery.
  * - Sắp xếp theo thứ tự hiển thị (position tăng dần).
@@ -19,11 +21,9 @@ import { sendSuccess } from '../utils/ApiResponse';
  * - Có phân trang (page, pageSize tối đa 50).
  */
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const { categorySlug, page = '1', pageSize = '10' } = req.query;
+  const { categorySlug } = req.query;
 
-  const take = Math.min(Number(pageSize) || 10, 50);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 10, maxSize: 50 });
 
   const where: { categoryId?: { in: string[] } } = {};
 
@@ -52,9 +52,10 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   const [items, total] = await Promise.all([
     prisma.galleryItem.findMany({
       where,
-      orderBy: {
-        position: 'asc',
-      },
+      // Hiện mọi ảnh đều có position = 0, nên thứ tự thực tế do khoá phụ quyết định. Dùng
+      // createdAt trước rồi mới tới id: khớp đúng thứ tự site đang hiển thị (ảnh tạo trước đứng
+      // trước). Sắp phụ thẳng theo id (UUID ngẫu nhiên) sẽ xáo lại toàn bộ gallery trên trang chủ.
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       include: {
         category: true,
       },
@@ -65,7 +66,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });

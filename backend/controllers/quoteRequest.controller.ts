@@ -10,6 +10,8 @@ import asyncHandler from '../utils/asyncHandler';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import { parsePagination } from '../utils/pagination';
+
 import * as Sentry from '@sentry/node';
 
 import { sendMail, shopInbox } from '../services/mail.service';
@@ -253,11 +255,9 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
-  const { page = '1', pageSize = '20', status } = req.query;
+  const { status } = req.query;
 
-  const take = Math.min(Number(pageSize) || 20, 100);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 20, maxSize: 100 });
 
   const where: Prisma.QuoteRequestWhereInput = {
     brandSlug: req.brand.slug,
@@ -270,9 +270,8 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const [rows, total] = await Promise.all([
     prisma.quoteRequest.findMany({
       where,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip,
       take,
     }),
@@ -280,7 +279,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, rows, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });

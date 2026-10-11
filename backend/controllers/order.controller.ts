@@ -12,6 +12,8 @@ import asyncHandler from '../utils/asyncHandler';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import { parsePagination } from '../utils/pagination';
+
 import { PRODUCT_STATUS } from '../constants/product';
 
 import {
@@ -227,11 +229,7 @@ export const listMyOrders = asyncHandler(async (req: Request, res: Response) => 
     );
   }
 
-  const { page = '1', pageSize = '10' } = req.query;
-
-  const take = Math.min(Number(pageSize) || 10, 50);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 10, maxSize: 50 });
 
   const where: Prisma.OrderWhereInput = {
     userId: req.user.id,
@@ -241,9 +239,8 @@ export const listMyOrders = asyncHandler(async (req: Request, res: Response) => 
   const [items, total] = await Promise.all([
     prisma.order.findMany({
       where,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         items: true,
       },
@@ -254,7 +251,7 @@ export const listMyOrders = asyncHandler(async (req: Request, res: Response) => 
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });
@@ -310,11 +307,9 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
-  const { page = '1', pageSize = '20', orderStatus, paymentStatus } = req.query;
+  const { orderStatus, paymentStatus } = req.query;
 
-  const take = Math.min(Number(pageSize) || 20, 100);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 20, maxSize: 100 });
 
   const where: Prisma.OrderWhereInput = {
     brandSlug: req.brand.slug,
@@ -331,9 +326,8 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const [items, total] = await Promise.all([
     prisma.order.findMany({
       where,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         items: true,
         user: {
@@ -351,7 +345,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });

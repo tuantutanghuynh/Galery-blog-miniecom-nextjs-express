@@ -8,6 +8,8 @@ import asyncHandler from '../utils/asyncHandler';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import { parsePagination } from '../utils/pagination';
+
 /**
  * Tiếp nhận tin nhắn liên hệ từ khách hàng qua form liên hệ trên trang web.
  * - Kiểm tra trường honeypot (website_url) để lọc bot spam tự động.
@@ -60,11 +62,9 @@ export const submitContact = asyncHandler(async (req: Request, res: Response) =>
  * - Hỗ trợ phân trang chuẩn (page, pageSize tối đa 100).
  */
 export const adminList = asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', pageSize = '20', isRead } = req.query;
+  const { isRead } = req.query;
 
-  const take = Math.min(Number(pageSize) || 20, 100);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 20, maxSize: 100 });
 
   const where: { isRead?: boolean } = {};
 
@@ -75,9 +75,8 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const [items, total] = await Promise.all([
     prisma.contactMessage.findMany({
       where,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip,
       take,
     }),
@@ -85,7 +84,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });

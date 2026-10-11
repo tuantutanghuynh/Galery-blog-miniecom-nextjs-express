@@ -10,6 +10,8 @@ import asyncHandler from '../utils/asyncHandler';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import { parsePagination } from '../utils/pagination';
+
 import { sanitizeContent } from '../utils/sanitizeContent';
 
 /**
@@ -19,11 +21,9 @@ import { sanitizeContent } from '../utils/sanitizeContent';
  * - Sắp xếp bài mới nhất lên đầu theo ngày xuất bản (publishedAt giảm dần).
  */
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', pageSize = '10', categorySlug } = req.query;
+  const { categorySlug } = req.query;
 
-  const take = Math.min(Number(pageSize) || 10, 50);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 10, maxSize: 50 });
 
   const where: Prisma.BlogPostWhereInput = {
     status: 'published',
@@ -57,9 +57,8 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   const [items, total] = await Promise.all([
     prisma.blogPost.findMany({
       where,
-      orderBy: {
-        publishedAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị publishedAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
       include: {
         category: true,
         author: {
@@ -76,7 +75,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });
@@ -124,11 +123,9 @@ export const getBySlug = asyncHandler(async (req: Request, res: Response) => {
  * - Hỗ trợ lọc theo trạng thái và danh mục thương hiệu.
  */
 export const adminList = asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', pageSize = '20', status, categorySlug, search } = req.query;
+  const { status, categorySlug, search } = req.query;
 
-  const take = Math.min(Number(pageSize) || 20, 100);
-
-  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const { page, take, skip } = parsePagination(req.query, { defaultSize: 20, maxSize: 100 });
 
   const where: Prisma.BlogPostWhereInput = {};
 
@@ -174,9 +171,8 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const [items, total] = await Promise.all([
     prisma.blogPost.findMany({
       where,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         category: true,
         author: {
@@ -193,7 +189,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
   ]);
 
   sendSuccess(res, items, {
-    page: Number(page),
+    page,
     pageSize: take,
     total,
   });
