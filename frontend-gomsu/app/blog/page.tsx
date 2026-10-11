@@ -7,6 +7,8 @@ import { BlogPost } from '@/types/blog';
 
 export const metadata: Metadata = { 
   title: 'Blog Kiến thức',
+  description:
+    'Bài viết về gốm sứ Bát Tràng: cách chọn, bày trí và giữ gìn đồ gốm, cùng câu chuyện nghề từ xưởng Nghĩa Phái.',
   alternates: {
     canonical: '/blog',
   },

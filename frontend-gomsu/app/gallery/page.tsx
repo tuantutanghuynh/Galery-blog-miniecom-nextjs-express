@@ -8,6 +8,8 @@ import { GalleryItem } from '@/types/gallery';
 
 export const metadata: Metadata = { 
   title: 'Bộ sưu tập',
+  description:
+    'Ảnh các tác phẩm gốm sứ nghệ thuật Bát Tràng của Nghĩa Phái: bình, tượng và đồ trang trí làm thủ công.',
   alternates: {
     canonical: '/gallery',
   },

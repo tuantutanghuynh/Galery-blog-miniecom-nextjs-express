@@ -7,6 +7,7 @@ import { AuthProvider } from '@/lib/useAuth';
 import { QuoteListProvider } from '@/lib/useQuoteList';
 import { toJsonLd } from '@/lib/jsonLd';
 import { CONTACT } from '@/lib/contact';
+import { SITE_URL } from '@/lib/site';
 
 const playfair = Playfair_Display({
   subsets: ['vietnamese'],
@@ -25,9 +26,7 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: { default: 'Nghĩa Phái Art & Design', template: '%s | Nghĩa Phái' },
   description: 'Hơi thở đất - Dáng hình thời gian. Gốm sứ nghệ thuật Bát Tràng.',
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app'
-  ),
+  metadataBase: new URL(SITE_URL),
   // KHÔNG đặt `alternates.canonical` ở đây: Next.js kế thừa nó xuống mọi trang con chưa tự
   // khai, khiến /about, /contact... đều tự xưng là trang chủ và bị Google gỡ khỏi index.
   // Mỗi trang tự khai canonical của riêng nó.
@@ -51,17 +50,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'Nghĩa Phái Art & Design',
-    url:
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      'https://galery-blog-miniecom-nextjs-express.vercel.app',
-    logo: `${
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      'https://galery-blog-miniecom-nextjs-express.vercel.app'
-    }/images/logo-nghia-phai-gom-su-bat-trang-v2.png`,
-    image: `${
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      'https://galery-blog-miniecom-nextjs-express.vercel.app'
-    }/images/about/nghia-profile.jpg`,
+    url: SITE_URL,
+    logo: `${SITE_URL}/images/logo-nghia-phai-gom-su-bat-trang-v2.png`,
+    image: `${SITE_URL}/images/about/nghia-profile.jpg`,
     description:
       'Không gian gốm sứ nghệ thuật Bát Tràng thủ công cao cấp. Khám phá vẻ đẹp truyền thống và đương đại.',
     address: {

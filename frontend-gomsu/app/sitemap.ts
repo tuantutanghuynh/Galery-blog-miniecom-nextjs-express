@@ -3,9 +3,10 @@ import { apiFetch } from '@/lib/apiClient';
 import { BRAND_CATEGORY_SLUG } from '@/lib/brand';
 import type { BlogPost } from '@/types/blog';
 import type { Product } from '@/types/product';
+import { SITE_URL } from '@/lib/site';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const baseUrl = SITE_URL;
 
   // Các trang tĩnh
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -17,7 +18,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/contact',
   ].map((route) => ({
     url: `${baseUrl}${route}`,
-    lastModified: new Date(),
+    // Không ghi lastModified: trang tĩnh không có ngày sửa thật, mà `new Date()` báo với Google
+    // rằng trang đổi mỗi lần sitemap được tạo, làm Google mất tin vào mọi ngày trong file này.
     changeFrequency: 'weekly' as const,
     priority: route === '' ? 1 : 0.8,
   }));

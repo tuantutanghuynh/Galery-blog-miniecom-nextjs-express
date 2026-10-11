@@ -5,6 +5,7 @@ import { renderHtml, excerptFromContent } from '@/lib/markdown';
 import { toJsonLd } from '@/lib/jsonLd';
 import { notFound } from 'next/navigation';
 import { BlogPost } from '@/types/blog';
+import { SITE_URL } from '@/lib/site';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -74,8 +75,8 @@ export default async function BlogDetailPage({ params }: PageProps) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
-      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/blog` },
+      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
       { '@type': 'ListItem', position: 3, name: post.title }
     ]
   };

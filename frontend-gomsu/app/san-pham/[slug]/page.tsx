@@ -11,6 +11,7 @@ import ProductSpecifications from '@/components/product/ProductSpecifications';
 import ProductClosingCta from '@/components/product/ProductClosingCta';
 import type { Product } from '@/types/product';
 import type { ShopSettings } from '@/types/setting';
+import { SITE_URL } from '@/lib/site';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -76,7 +77,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     0
   );
   const inStock = available > 0;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+  const siteUrl = SITE_URL;
 
   // Dữ liệu có cấu trúc cho Google và các công cụ AI. Giá và tình trạng hàng ở đây phải khớp
   // với những gì hiện trên trang — khai báo lệch là lý do phổ biến nhất khiến Google bỏ qua

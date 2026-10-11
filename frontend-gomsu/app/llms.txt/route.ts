@@ -3,12 +3,9 @@
 // chết. Ở đây mọi URL sinh ra từ NEXT_PUBLIC_SITE_URL — giống sitemap, robots và canonical
 // — nên ngày đổi sang tên miền thật chỉ cần sửa đúng một biến trên Vercel.
 import { CONTACT } from '@/lib/contact';
+import { SITE_URL } from '@/lib/site';
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app';
-
-// Bỏ dấu `/` cuối nếu người cấu hình lỡ thêm, tránh sinh ra URL kiểu `.../.../blog`.
-const baseUrl = SITE_URL.replace(/\/+$/, '');
+const baseUrl = SITE_URL;
 
 // Tên miền hiển thị trong câu hướng dẫn trích dẫn, lấy từ chính baseUrl để không bao giờ
 // lệch với các link phía trên.

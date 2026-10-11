@@ -4,6 +4,9 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Xưởng Sản Xuất',
   alternates: { canonical: '/workshop' },
+  // Trang chờ chỉ có một dòng "đang hoàn thiện": cho Google index thì site bị coi là có nội dung
+  // mỏng. Bỏ noindex khi trang có nội dung thật, và thêm nó vào sitemap.ts lúc đó.
+  robots: { index: false, follow: true },
 };
 
 export default function PlaceholderPage() {
