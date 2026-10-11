@@ -134,6 +134,11 @@ independent brands, each with its own Next.js frontend.
 
 ### The storefront
 
+<p align="center">
+<img src="assets/screenshots/home-full.jpg" alt="Full homepage" width="720" /><br/>
+<b>Homepage</b> — hero, the artist, a quote, featured works, latest stories and contact
+</p>
+
 <table>
 <tr>
 <td width="50%"><img src="assets/screenshots/gallery.jpg" alt="Gallery" /><p align="center"><b>Gallery</b> — works filtered by category</p></td>
@@ -153,12 +158,6 @@ independent brands, each with its own Next.js frontend.
 <td width="50%"><img src="assets/screenshots/about.jpg" alt="About the artist" /><p align="center"><b>About</b> — the artist's exhibitions and awards</p></td>
 </tr>
 </table>
-
-<details>
-<summary><b>Full homepage</b></summary>
-<br/>
-<img src="assets/screenshots/home-full.jpg" alt="Full homepage" />
-</details>
 
 <details>
 <summary><b>Blog index, contact and sign-in</b></summary>
