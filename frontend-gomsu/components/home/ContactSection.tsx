@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CONTACT } from '@/lib/contact';
 
 export default function ContactSection() {
   return (
@@ -36,11 +37,11 @@ export default function ContactSection() {
               Liên lạc
             </h4>
             <div className="text-sm font-light leading-loose text-gray-300 flex flex-col">
-              <a href="mailto:info@nghiaphai.vn" className="hover:text-gomsu-primary transition-colors">
-                info@nghiaphai.vn
+              <a href={`mailto:${CONTACT.email}`} className="hover:text-gomsu-primary transition-colors">
+                {CONTACT.email}
               </a>
-              <a href="tel:+84123456789" className="hover:text-gomsu-primary transition-colors">
-                +84 xxx xxx xxx
+              <a href={`tel:${CONTACT.phoneE164}`} className="hover:text-gomsu-primary transition-colors">
+                {CONTACT.phoneDisplay}
               </a>
             </div>
           </div>

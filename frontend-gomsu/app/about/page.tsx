@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import { apiFetch } from '@/lib/apiClient';
 import VisualEditorOverlay from '@/components/ui/VisualEditorOverlay';
+import { CONTACT } from '@/lib/contact';
 import React from 'react';
 
 export const metadata: Metadata = {
@@ -96,7 +97,18 @@ export default async function AboutPage() {
               <p><strong className="text-white font-medium">Năm sinh:</strong> 2001</p>
               <p><strong className="text-white font-medium">Học vấn:</strong> Tốt nghiệp Đại học Mỹ thuật Việt Nam (2020–2025)</p>
               <p><strong className="text-white font-medium">Đoàn thể:</strong> Hội viên Hội Mỹ thuật Việt Nam</p>
-              <p><strong className="text-white font-medium">Điện thoại:</strong> 0334.626.393</p>
+              <p>
+                <strong className="text-white font-medium">Điện thoại:</strong>{' '}
+                <a href={`tel:${CONTACT.phoneE164}`} className="hover:text-gomsu-primary transition-colors">
+                  {CONTACT.phoneDisplay}
+                </a>
+              </p>
+              <p>
+                <strong className="text-white font-medium">Email:</strong>{' '}
+                <a href={`mailto:${CONTACT.email}`} className="hover:text-gomsu-primary transition-colors">
+                  {CONTACT.email}
+                </a>
+              </p>
               <p><strong className="text-white font-medium">Địa chỉ:</strong> Bát Tràng, Gia Lâm, Hà Nội</p>
             </div>
           </div>

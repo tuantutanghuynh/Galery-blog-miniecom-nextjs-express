@@ -6,6 +6,7 @@ import Navbar from '@/components/layout/Navbar';
 import { AuthProvider } from '@/lib/useAuth';
 import { QuoteListProvider } from '@/lib/useQuoteList';
 import { toJsonLd } from '@/lib/jsonLd';
+import { CONTACT } from '@/lib/contact';
 
 const playfair = Playfair_Display({
   subsets: ['vietnamese'],
@@ -71,7 +72,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       postalCode: '100000',
       addressCountry: 'VN',
     },
-    telephone: '+84-334-626-393',
+    telephone: CONTACT.phoneE164,
+    email: CONTACT.email,
     priceRange: '$$$',
     areaServed: ['Hà Nội', 'Vietnam'],
     knowsAbout: ['Pottery', 'Ceramics', 'Handmade Art', 'Gốm sứ', 'Nghệ thuật Bát Tràng'],

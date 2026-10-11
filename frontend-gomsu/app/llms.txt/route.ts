@@ -2,6 +2,8 @@
 // đọc được biến môi trường, nên bản cũ hardcode một tên miền chưa mua và trỏ bot vào link
 // chết. Ở đây mọi URL sinh ra từ NEXT_PUBLIC_SITE_URL — giống sitemap, robots và canonical
 // — nên ngày đổi sang tên miền thật chỉ cần sửa đúng một biến trên Vercel.
+import { CONTACT } from '@/lib/contact';
+
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://galery-blog-miniecom-nextjs-express.vercel.app';
 
@@ -20,6 +22,7 @@ const content = `# Nghĩa Phái Art & Design
 Nghĩa Phái Art & Design là thương hiệu gốm sứ nghệ thuật cao cấp tại làng nghề truyền thống Bát Tràng, Gia Lâm, Hà Nội, Việt Nam. Chúng tôi chuyên nghiên cứu, phục dựng và sáng tác các tác phẩm gốm sứ thủ công độc bản mang đậm bản sắc văn hóa Việt.
 - **Chuyên gia / Nghệ nhân chính:** Nguyễn Đức Nghĩa
 - **Chuyên môn:** Gốm sứ Bát Tràng (Ceramics), Đồ thủ công mỹ nghệ (Handmade Art).
+- **Liên hệ:** ${CONTACT.phoneDisplay} · ${CONTACT.email}
 
 ## Khám phá Nội dung
 Nếu bạn đang tìm kiếm thông tin chuyên sâu về gốm sứ Việt Nam, hãy tham khảo các tài nguyên sau của chúng tôi:
