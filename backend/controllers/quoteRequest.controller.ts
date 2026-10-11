@@ -10,6 +10,14 @@ import asyncHandler from '../utils/asyncHandler';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import * as Sentry from '@sentry/node';
+
+import { sendMail, shopInbox } from '../services/mail.service';
+
+import { quoteShopEmail, quoteCustomerEmail } from '../services/mailTemplates';
+
+import type { QuoteLine, QuoteSummary } from '../services/mailTemplates';
+
 export const QUOTE_STATUS = {
   NEW: 'NEW',
   CONTACTED: 'CONTACTED',
@@ -23,6 +31,31 @@ const MAX_ITEMS = 50;
 interface QuoteRequestItemInput {
   variantId?: string;
   quantity?: number | string;
+}
+
+// Gửi hai thư sau khi một yêu cầu tư vấn được lưu: báo cho shop, và xác nhận cho khách nếu khách
+// có để lại email (ô email trong form là tuỳ chọn).
+//
+// Cố ý không await. Yêu cầu đã nằm an toàn trong database, nên thư chỉ là thông báo phụ: khách
+// không nên phải chờ SMTP, càng không nên nhận lỗi chỉ vì Google chậm hay từ chối gửi. Mỗi thư
+// bắt lỗi riêng để thư này hỏng không kéo thư kia hỏng theo, và lỗi được báo lên Sentry vì một
+// shop bỏ lỡ thông báo đơn hàng là mất khách thật.
+function notifyQuoteRequest(quote: QuoteSummary, lines: QuoteLine[]): void {
+  const report = (label: string) => (err: unknown) => {
+    console.error(`[mail] Gửi ${label} thất bại:`, err instanceof Error ? err.message : err);
+    Sentry.captureException(err);
+  };
+
+  const shop = shopInbox();
+  if (shop) {
+    const adminUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/admin/quote-requests`;
+    sendMail(quoteShopEmail(shop, quote, lines, adminUrl)).catch(report('thư báo shop'));
+  }
+
+  if (quote.email) {
+    const phone = process.env.SHOP_PHONE || '0768.986.986';
+    sendMail(quoteCustomerEmail(quote.email, quote, lines, phone)).catch(report('thư xác nhận cho khách'));
+  }
 }
 
 /**
@@ -141,7 +174,9 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
         imageUrl: variant.imageUrl || variant.product.images[0]?.url || null,
       };
     })
-    .filter(Boolean) as Prisma.InputJsonValue[];
+    // Lọc null bằng type guard thay vì ép kiểu: giữ được kiểu thật của từng dòng để thư thông
+    // báo phía dưới dùng lại, không phải đoán lại cấu trúc của một mảng JSON vô danh.
+    .filter(<T,>(line: T | null): line is T => line !== null);
 
   if (snapshot.length === 0) {
     throw new ApiError(
@@ -163,6 +198,8 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
       items: snapshot,
     },
   });
+
+  notifyQuoteRequest(created, snapshot);
 
   sendSuccess(
     res,

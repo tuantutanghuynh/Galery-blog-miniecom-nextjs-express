@@ -20,6 +20,12 @@ import ApiError from '../utils/ApiError';
 
 import { sendSuccess } from '../utils/ApiResponse';
 
+import * as Sentry from '@sentry/node';
+
+import { sendMail } from '../services/mail.service';
+
+import { passwordResetEmail } from '../services/mailTemplates';
+
 /**
  * Đăng ký tài khoản khách hàng mới (customer).
  * - Kiểm tra email đã tồn tại trong hệ thống chưa (tránh trùng lặp).
@@ -224,10 +230,12 @@ export const requestPasswordReset = asyncHandler(
       where: { email },
     });
 
+    // Cùng một câu trả lời dù email có tài khoản hay không. Trả lời khác nhau thì trang này
+    // thành công cụ dò xem ai đã đăng ký trên site.
+    const genericReply = { message: 'Nếu email này có tài khoản, liên kết đặt lại mật khẩu đã được gửi.' };
+
     if (!user) {
-      return sendSuccess(res, {
-        message: 'Nếu email tồn tại, link reset sẽ được gửi.',
-      });
+      return sendSuccess(res, genericReply);
     }
 
     await prisma.passwordResetToken.deleteMany({
@@ -249,13 +257,24 @@ export const requestPasswordReset = asyncHandler(
       },
     });
 
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/reset-password?token=${token}&email=${email}`;
+    // encodeURIComponent vì email được phép chứa `+` và `&`, hai ký tự có nghĩa riêng trong URL:
+    // không mã hoá thì `a+b@x.com` đến trang đặt lại thành `a b@x.com` và link hỏng.
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
 
-    console.log(`[PASSWORD RESET] ${email}:\n${resetLink}`);
+    // Gửi kiểu "bắn rồi quên": không await. Chờ SMTP thì thời gian phản hồi cho email có tài
+    // khoản sẽ dài hơn hẳn email không có, và độ chênh đó lại để lộ ai đã đăng ký — đúng điều
+    // genericReply ở trên muốn tránh. Lỗi gửi được ghi lại và báo lên Sentry thay vì nuốt mất.
+    sendMail(passwordResetEmail(email, resetLink))
+      .then((sent) => {
+        // Chưa cấu hình SMTP (máy local) thì vẫn in link ra log để còn dùng được.
+        if (!sent) console.log(`[PASSWORD RESET] ${email}:\n${resetLink}`);
+      })
+      .catch((err: unknown) => {
+        console.error('[mail] Gửi thư đặt lại mật khẩu thất bại:', err instanceof Error ? err.message : err);
+        Sentry.captureException(err);
+      });
 
-    sendSuccess(res, {
-      message: 'Kiểm tra console/logs để lấy link reset password',
-    });
+    sendSuccess(res, genericReply);
   }
 );
 

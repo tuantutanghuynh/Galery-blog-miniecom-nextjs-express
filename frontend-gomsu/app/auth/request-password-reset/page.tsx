@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/apiClient';
+import { CONTACT } from '@/lib/contact';
 
 export default function RequestPasswordResetPage() {
   const [email, setEmail] = useState('');
@@ -46,12 +47,15 @@ export default function RequestPasswordResetPage() {
               {/* Luôn báo cùng một câu dù email có tồn tại hay không: nếu phân biệt hai trường
                   hợp thì trang này thành công cụ để dò xem ai đã có tài khoản trên site. */}
               <p className="text-sm text-gray-600 leading-relaxed">
-                Nếu email <strong className="text-gray-900">{email}</strong> có tài khoản, chúng tôi đã tạo
-                một liên kết đặt lại mật khẩu. Liên kết chỉ có hiệu lực trong 1 giờ.
+                Nếu email <strong className="text-gray-900">{email}</strong> có tài khoản, chúng tôi đã gửi
+                một liên kết đặt lại mật khẩu tới hộp thư đó. Liên kết chỉ có hiệu lực trong 1 giờ.
               </p>
               <p className="text-sm text-gray-500 mt-4 leading-relaxed">
-                Chưa nhận được thư? Tính năng gửi email đang được hoàn thiện — trong lúc chờ, vui lòng
-                liên hệ trực tiếp với chúng tôi để được hỗ trợ đặt lại mật khẩu.
+                Chưa thấy thư sau vài phút? Hãy kiểm tra cả mục Thư rác (Spam). Nếu vẫn không có, liên hệ{' '}
+                <a href={`tel:${CONTACT.phoneE164}`} className="text-gray-900 underline">
+                  {CONTACT.phoneDisplay}
+                </a>{' '}
+                để được hỗ trợ.
               </p>
               <Link
                 href="/contact"
