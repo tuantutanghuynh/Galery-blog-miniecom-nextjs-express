@@ -315,8 +315,10 @@ export default function AdminQuoteRequestsPage() {
                     />
                     <button
                       onClick={() => {
-                        const amount = Number(closingAmount);
-                        if (!Number.isInteger(amount) || amount < 0) {
+                        // Kiểm tra ô trống trước: Number('') ra 0, bỏ qua bước này thì bấm
+                        // nút khi chưa nhập sẽ lưu thành đơn chốt 0đ.
+                        const amount = closingAmount.trim() === '' ? NaN : Number(closingAmount);
+                        if (!Number.isSafeInteger(amount) || amount < 0) {
                           alert('Vui lòng nhập số tiền đã chốt (số nguyên, không âm).');
                           return;
                         }

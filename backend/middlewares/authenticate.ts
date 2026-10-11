@@ -24,7 +24,7 @@ export function authenticate(
       new ApiError(
         401,
         'UNAUTHENTICATED',
-        'Missing access token'
+        'Bạn chưa đăng nhập'
       )
     );
   }
@@ -43,7 +43,7 @@ export function authenticate(
       new ApiError(
         401,
         'UNAUTHENTICATED',
-        'Access token is invalid or expired'
+        'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại'
       )
     );
   }

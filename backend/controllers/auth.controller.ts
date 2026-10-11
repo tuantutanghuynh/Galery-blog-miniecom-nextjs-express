@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs';
 
 import crypto from 'crypto';
 
+import { Prisma } from '@prisma/client';
+
 import prisma from '../services/prisma';
 
 import { signAccessToken } from '../services/jwt.service';
@@ -49,14 +51,25 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      fullName,
-      role: 'customer',
-    },
-  });
+  // Phép kiểm tra `existing` ở trên không đủ khi khách bấm đăng ký hai lần liền: cả hai request
+  // cùng thấy email còn trống rồi cùng tạo. Ràng buộc unique của database chặn request thứ hai,
+  // và lỗi P2002 đó phải thành 409 như trường hợp thường chứ không phải 500.
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        fullName,
+        role: 'customer',
+      },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      throw new ApiError(409, 'EMAIL_TAKEN', 'Email này đã được đăng ký');
+    }
+    throw err;
+  }
 
   const accessToken = signAccessToken({
     sub: user.id,
@@ -296,14 +309,6 @@ export const resetPassword = asyncHandler(
       where: { email },
     });
 
-    if (!user) {
-      throw new ApiError(
-        400,
-        'INVALID_REQUEST',
-        'Email không hợp lệ'
-      );
-    }
-
     const tokenHash = crypto
       .createHash('sha256')
       .update(token)
@@ -313,7 +318,9 @@ export const resetPassword = asyncHandler(
       where: { tokenHash },
     });
 
-    if (!resetToken || resetToken.userId !== user.id) {
+    // Email không có tài khoản trả cùng lỗi với token sai. Trả lỗi riêng thì trang này thành
+    // công cụ dò xem email nào đã đăng ký, đúng điều trang "quên mật khẩu" cố tránh.
+    if (!user || !resetToken || resetToken.userId !== user.id) {
       throw new ApiError(
         400,
         'INVALID_TOKEN',
@@ -331,14 +338,22 @@ export const resetPassword = asyncHandler(
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash },
-    });
-
-    await prisma.passwordResetToken.delete({
-      where: { id: resetToken.id },
-    });
+    // Ba việc trong một transaction để không dừng giữa chừng: đổi mật khẩu, huỷ token đặt lại,
+    // và đăng xuất mọi phiên cũ. Phiên cũ phải chết theo, vì người phải đặt lại mật khẩu
+    // thường là người nghi bị lộ tài khoản; kẻ đang giữ refresh token không được giữ quyền vào.
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      }),
+      prisma.passwordResetToken.deleteMany({
+        where: { userId: user.id },
+      }),
+      prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
 
     sendSuccess(res, {
       message: 'Mật khẩu đã được đặt lại thành công',
@@ -353,7 +368,7 @@ export const resetPassword = asyncHandler(
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
 
-  if (refreshToken) {
+  if (typeof refreshToken === 'string' && refreshToken) {
     await revokeRefreshToken(refreshToken);
   }
 

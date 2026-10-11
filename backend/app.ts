@@ -5,7 +5,7 @@ import cors from 'cors';
 import type { CorsOptions } from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
+import createLimiter from './utils/rateLimit';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import routes from './routes';
@@ -59,14 +59,12 @@ app.use(cors(corsOptions));
 
 // Baseline throttle of 100 requests per 15 minutes per IP across the whole API, as a blunt
 // protection against scraping and runaway clients. Sensitive endpoints do not rely on this
-// number alone: `/auth/*` and `/contact` mount their own stricter limiters in their route
-// files, which run in addition to this one.
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per 15 minutes
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many requests from this IP, please try again after 15 minutes',
+// number alone: `/auth/*`, `/contact` and `/quote-requests` mount their own stricter limiters
+// in their route files, which run in addition to this one.
+const apiLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Bạn thao tác quá nhanh, vui lòng thử lại sau 15 phút.',
 });
 
 app.use('/api/', apiLimiter);

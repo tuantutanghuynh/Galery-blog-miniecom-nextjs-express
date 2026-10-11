@@ -30,6 +30,35 @@ export type QuoteStatus = (typeof QUOTE_STATUS)[keyof typeof QUOTE_STATUS];
 
 const MAX_ITEMS = 50;
 
+// Cột finalAmount là Int của PostgreSQL. Vượt mức này thì database từ chối và người dùng nhận 500,
+// nên chặn trước bằng một lỗi nói rõ lý do.
+const MAX_FINAL_AMOUNT = 2_147_483_647;
+
+// Bắt đầu bằng 0 hoặc +84. Di động: 03/05/07/08/09 + 8 số (10 số). Máy bàn: 02 + 9 số (11 số).
+// Bỏ qua dấu chấm, khoảng trắng, gạch nối, ngoặc vì khách hay gõ kiểu 0768.986.986.
+const PHONE_PATTERN = /^(?:0|\+84)(?:[35789]\d{8}|2\d{9})$/;
+
+function isVietnamesePhone(raw: string): boolean {
+  return PHONE_PATTERN.test(raw.replace(/[\s.\-()]/g, ''));
+}
+
+// `status in QUOTE_STATUS` coi cả thuộc tính có sẵn của mọi object (toString, constructor) là
+// hợp lệ, và giá trị rác đó sẽ được ghi thẳng vào database. So với danh sách giá trị thật.
+function isQuoteStatus(value: unknown): value is QuoteStatus {
+  return typeof value === 'string' && (Object.values(QUOTE_STATUS) as string[]).includes(value);
+}
+
+// Ngày trong query thống kê. Không có thì bỏ qua; có mà không đọc được thì báo 400, vì
+// `new Date('abc')` ra Invalid Date và Prisma ném lỗi thành 500.
+function parseDateParam(raw: unknown, name: string): Date | undefined {
+  if (raw === undefined || raw === '') return undefined;
+  const date = typeof raw === 'string' ? new Date(raw) : new Date(NaN);
+  if (Number.isNaN(date.getTime())) {
+    throw new ApiError(400, 'INVALID_DATE', `Giá trị "${name}" không phải ngày hợp lệ.`);
+  }
+  return date;
+}
+
 interface QuoteRequestItemInput {
   variantId?: string;
   quantity?: number | string;
@@ -88,11 +117,29 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
+  // Body là JSON do client tự gửi, nên "họ tên" có thể là số, mảng hay object. Chặn ở đây, nếu
+  // không thì `.trim()` phía dưới ném TypeError và khách nhận về lỗi 500 khó hiểu.
+  if ([customerName, phone, address, email, note].some((v) => v != null && typeof v !== 'string')) {
+    throw new ApiError(
+      400,
+      'INVALID_FIELDS',
+      'Dữ liệu gửi lên không hợp lệ.'
+    );
+  }
+
   if (!customerName?.trim() || !phone?.trim() || !address?.trim()) {
     throw new ApiError(
       400,
       'MISSING_FIELDS',
       'Vui lòng điền họ tên, số điện thoại và địa chỉ.'
+    );
+  }
+
+  if (!isVietnamesePhone(phone)) {
+    throw new ApiError(
+      400,
+      'INVALID_PHONE',
+      'Số điện thoại không hợp lệ. Vui lòng nhập số di động 10 số hoặc số máy bàn 11 số.'
     );
   }
 
@@ -128,9 +175,15 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
+  // Chỉ nhận sản phẩm đang bán của đúng brand này. Thiếu điều kiện thì khách đoán được id có thể
+  // hỏi giá món còn ở dạng nháp, món đã ngừng bán, hay món của storefront khác.
   const variants = await prisma.productVariant.findMany({
     where: {
       id: { in: variantIds },
+      product: {
+        status: 'active',
+        categoryId: { in: req.brand.categoryIds },
+      },
     },
     include: {
       product: {
@@ -154,7 +207,8 @@ export const submit = asyncHandler(async (req: Request, res: Response) => {
 
       if (!variant) return null;
 
-      const quantity = Math.min(Math.max(Number(raw.quantity) || 1, 1), 99);
+      // Làm tròn xuống trước khi kẹp: số món phải là số nguyên, kéo theo thành tiền là số nguyên.
+      const quantity = Math.min(Math.max(Math.floor(Number(raw.quantity)) || 1, 1), 99);
 
       const variantAttrs =
         (variant.variantAttributes as Record<string, unknown>) || {};
@@ -263,7 +317,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
     brandSlug: req.brand.slug,
   };
 
-  if (status && typeof status === 'string' && status in QUOTE_STATUS) {
+  if (isQuoteStatus(status)) {
     where.status = status;
   }
 
@@ -301,7 +355,7 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
 
   const { status, finalAmount } = req.body;
 
-  if (!status || !(status in QUOTE_STATUS)) {
+  if (!isQuoteStatus(status)) {
     throw new ApiError(
       400,
       'INVALID_STATUS',
@@ -312,13 +366,28 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
   const data: Prisma.QuoteRequestUpdateInput = { status };
 
   if (status === QUOTE_STATUS.CLOSED) {
-    const amount = Number(finalAmount);
+    // Chỉ nhận số hoặc chuỗi chữ số. Không đưa thẳng vào Number(): Number('') và Number(null)
+    // đều ra 0, Number(true) ra 1, nên ô bỏ trống sẽ lặng lẽ thành một đơn chốt 0đ.
+    const amount =
+      typeof finalAmount === 'number'
+        ? finalAmount
+        : typeof finalAmount === 'string' && finalAmount.trim() !== ''
+          ? Number(finalAmount)
+          : NaN;
 
-    if (!Number.isInteger(amount) || amount < 0) {
+    if (!Number.isSafeInteger(amount) || amount < 0) {
       throw new ApiError(
         400,
         'INVALID_AMOUNT',
         'Vui lòng nhập số tiền đã chốt.'
+      );
+    }
+
+    if (amount > MAX_FINAL_AMOUNT) {
+      throw new ApiError(
+        400,
+        'AMOUNT_TOO_LARGE',
+        'Số tiền vượt quá giới hạn hệ thống (tối đa 2.147.483.647đ).'
       );
     }
 
@@ -364,31 +433,19 @@ export const stats = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
-  const { from, to } = req.query;
+  const from = parseDateParam(req.query.from, 'from');
+  const to = parseDateParam(req.query.to, 'to');
+  const range = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
 
   const closedWhere: Prisma.QuoteRequestWhereInput = {
     brandSlug: req.brand.slug,
-    closedAt: { not: null },
+    closedAt: { not: null, ...range },
   };
-
-  if (from || to) {
-    closedWhere.closedAt = {
-      not: null,
-      ...(from && typeof from === 'string' ? { gte: new Date(from) } : {}),
-      ...(to && typeof to === 'string' ? { lte: new Date(to) } : {}),
-    };
-  }
 
   const createdWhere: Prisma.QuoteRequestWhereInput = {
     brandSlug: req.brand.slug,
+    ...(from || to ? { createdAt: range } : {}),
   };
-
-  if (from || to) {
-    createdWhere.createdAt = {
-      ...(from && typeof from === 'string' ? { gte: new Date(from) } : {}),
-      ...(to && typeof to === 'string' ? { lte: new Date(to) } : {}),
-    };
-  }
 
   const [closed, totalRequests] = await Promise.all([
     prisma.quoteRequest.aggregate({

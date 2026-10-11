@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
+import createLimiter from '../utils/rateLimit';
 import authenticate from '../middlewares/authenticate';
 import optionalAuthenticate from '../middlewares/optionalAuthenticate';
 import requireRole from '../middlewares/requireRole';
@@ -14,14 +14,10 @@ router.use(resolveBrand);
 
 // Rộng tay hơn form liên hệ (5 lượt) vì khách hỏi giá nhiều món trong một buổi là bình thường,
 // nhưng vẫn đủ chặt để một con bot không đổ rác vào danh sách nhân viên phải gọi.
-const submitLimiter = rateLimit({
+const submitLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.',
-  },
+  message: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.',
 });
 
 router.post('/', submitLimiter, optionalAuthenticate, ctrl.submit);

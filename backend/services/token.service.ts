@@ -81,13 +81,19 @@ export async function rotateRefreshToken(
     return null;
   }
 
-  // Thu hồi token cũ
-  await prisma.refreshToken.update({
-    where: { id: record.id },
+  // Thu hồi token cũ, kèm điều kiện "chưa bị thu hồi" để việc kiểm tra và thu hồi là một bước
+  // nguyên tử. Tách làm hai bước thì vài request mang cùng token gửi cùng lúc đều thấy token còn
+  // sống và đều được cấp phiên mới. Request nào thu hồi chậm hơn (count = 0) bị từ chối.
+  const { count } = await prisma.refreshToken.updateMany({
+    where: { id: record.id, revokedAt: null },
     data: {
       revokedAt: new Date(),
     },
   });
+
+  if (count === 0) {
+    return null;
+  }
 
   // Phát hành token mới thay thế
   const newRawToken = await issueRefreshToken(record.userId);

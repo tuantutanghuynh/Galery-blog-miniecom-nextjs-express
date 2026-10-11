@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
+import createLimiter from '../utils/rateLimit';
 import * as contactController from '../controllers/contact.controller';
 import authenticate from '../middlewares/authenticate';
 import requireRole from '../middlewares/requireRole';
@@ -7,14 +7,10 @@ import requireRole from '../middlewares/requireRole';
 const router = Router();
 
 // Rate limiter chống spam (Tối đa 5 request / 15 phút từ 1 IP)
-const contactLimiter = rateLimit({
+const contactLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'Bạn đã gửi quá nhiều tin nhắn. Vui lòng thử lại sau 15 phút.'
-  }
+  message: 'Bạn đã gửi quá nhiều tin nhắn. Vui lòng thử lại sau 15 phút.',
 });
 
 // Khách truy cập gửi form (Public)

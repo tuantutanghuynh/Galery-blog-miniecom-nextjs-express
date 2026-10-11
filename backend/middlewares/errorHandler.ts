@@ -21,6 +21,24 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     });
   }
 
+  // Lỗi do express.json() ném khi body hỏng hoặc quá lớn. Đây là lỗi của phía gửi chứ không
+  // phải bug của server, nên trả 4xx kèm lời giải thích thay vì 500 chung chung.
+  const bodyError = (err as { type?: unknown } | null)?.type;
+  if (bodyError === 'entity.parse.failed') {
+    return res.status(400).json({
+      data: null,
+      meta: null,
+      error: { code: 'INVALID_JSON', message: 'Dữ liệu gửi lên không đúng định dạng.', details: null },
+    });
+  }
+  if (bodyError === 'entity.too.large') {
+    return res.status(413).json({
+      data: null,
+      meta: null,
+      error: { code: 'PAYLOAD_TOO_LARGE', message: 'Dữ liệu gửi lên quá lớn.', details: null },
+    });
+  }
+
   console.error(err);
   return res.status(500).json({
     data: null,
