@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import type Quill from 'quill';
+// Nạp CSS ở đây thay vì trong globals.css: chỉ trang có trình soạn thảo mới cần, và dòng @import
+// trong globals.css đã từng bị xoá mất khi sửa chỗ khác, làm thanh công cụ vỡ thành icon khổng lồ.
+import 'quill/dist/quill.snow.css';
 
 const TOOLBAR_OPTIONS = [
   [{ header: [1, 2, 3, 4, 5, 6, false] }],
