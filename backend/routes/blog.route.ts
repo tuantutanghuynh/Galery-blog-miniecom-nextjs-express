@@ -9,6 +9,8 @@ const router = Router();
 
 router.get('/', ctrl.list);
 router.get('/admin/list', authenticate, requireRole('admin'), ctrl.adminList);
+// Phải nằm SAU `/admin/list`: đặt trước thì chữ "list" bị hiểu là một id.
+router.get('/admin/:id', authenticate, requireRole('admin'), ctrl.getAdminById);
 router.get('/:slug', ctrl.getBySlug);
 
 router.post(

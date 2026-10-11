@@ -30,6 +30,13 @@ interface CreateProductImageInput {
   position?: number;
 }
 
+// Hình dạng một sản phẩm trong khu vực admin, dùng chung cho `adminList` và `getAdminById`.
+const ADMIN_PRODUCT_INCLUDE = {
+  category: true,
+  images: { orderBy: { position: 'asc' } },
+  variants: { orderBy: { price: 'asc' } },
+} satisfies Prisma.ProductInclude;
+
 /**
  * Lấy danh sách sản phẩm công khai cho khách hàng xem trên website.
  * - Chỉ lấy sản phẩm có trạng thái active (đang mở bán).
@@ -183,15 +190,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
       where,
       // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      include: {
-        category: true,
-        images: {
-          orderBy: { position: 'asc' },
-        },
-        variants: {
-          orderBy: { price: 'asc' },
-        },
-      },
+      include: ADMIN_PRODUCT_INCLUDE,
       skip,
       take,
     }),
@@ -203,6 +202,20 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
     pageSize: take,
     total,
   });
+});
+
+// Lấy một sản phẩm cho trang sửa, kể cả sản phẩm nháp mà endpoint công khai theo slug ẩn đi.
+export const getAdminById = asyncHandler(async (req: Request, res: Response) => {
+  const product = await prisma.product.findUnique({
+    where: { id: String(req.params.id) },
+    include: ADMIN_PRODUCT_INCLUDE,
+  });
+
+  if (!product) {
+    throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Không tìm thấy sản phẩm');
+  }
+
+  sendSuccess(res, product);
 });
 
 /**
@@ -712,4 +725,5 @@ export default {
   updateImage,
   removeImage,
   remove,
+  getAdminById,
 };

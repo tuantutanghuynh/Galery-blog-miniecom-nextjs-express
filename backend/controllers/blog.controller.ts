@@ -14,6 +14,13 @@ import { parsePagination } from '../utils/pagination';
 
 import { sanitizeContent } from '../utils/sanitizeContent';
 
+// Hình dạng một bài viết trong khu vực admin. Dùng chung cho `adminList` và `getAdminById` để
+// trang danh sách và trang sửa luôn nhận cùng một cấu trúc.
+const ADMIN_POST_INCLUDE = {
+  category: true,
+  author: { select: { id: true, fullName: true } },
+} satisfies Prisma.BlogPostInclude;
+
 /**
  * Lấy danh sách bài viết blog công khai cho khách truy cập website.
  * - Chỉ hiển thị các bài viết có status = 'published' và ngày xuất bản publishedAt <= hiện tại (ẩn bài hẹn giờ).
@@ -173,15 +180,7 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
       where,
       // `id` làm tie-breaker: hai mục trùng hệt giá trị createdAt vẫn có thứ tự cố định giữa các trang.
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      include: {
-        category: true,
-        author: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-      },
+      include: ADMIN_POST_INCLUDE,
       skip,
       take,
     }),
@@ -193,6 +192,22 @@ export const adminList = asyncHandler(async (req: Request, res: Response) => {
     pageSize: take,
     total,
   });
+});
+
+// Lấy một bài viết cho trang sửa. Khác `getBySlug` công khai: trả cả bản nháp và bài hẹn giờ,
+// vì đó chính là những bài cần sửa. Trước đây trang sửa phải tải cả danh sách admin rồi tự
+// tìm, nên bài thứ 21 trở đi (ngoài trang đầu 20 bài) không sửa được.
+export const getAdminById = asyncHandler(async (req: Request, res: Response) => {
+  const post = await prisma.blogPost.findUnique({
+    where: { id: String(req.params.id) },
+    include: ADMIN_POST_INCLUDE,
+  });
+
+  if (!post) {
+    throw new ApiError(404, 'POST_NOT_FOUND', 'Không tìm thấy bài viết');
+  }
+
+  sendSuccess(res, post);
 });
 
 /**
@@ -379,4 +394,5 @@ export default {
   create,
   update,
   remove,
+  getAdminById,
 };

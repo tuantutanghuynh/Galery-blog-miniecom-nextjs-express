@@ -16,6 +16,8 @@ const router = Router();
 // listing would answer 404 instead.
 router.get('/', ctrl.list);
 router.get('/admin/list', authenticate, requireRole('admin'), ctrl.adminList);
+// Phải nằm SAU `/admin/list`: đặt trước thì chữ "list" bị hiểu là một id.
+router.get('/admin/:id', authenticate, requireRole('admin'), ctrl.getAdminById);
 router.get('/:slug', ctrl.getBySlug);
 
 // Prices are validated as integers because the column is `Int` and money is never stored as a
